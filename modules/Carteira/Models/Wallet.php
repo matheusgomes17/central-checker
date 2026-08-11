@@ -9,6 +9,7 @@ use App\Models\Team;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Carteira\Database\Factories\WalletFactory;
 
 /**
@@ -44,5 +45,13 @@ class Wallet extends Model
                     return $wallet;
                 }),
         );
+    }
+
+    /**
+     * @return HasMany<WalletTransaction, $this>
+     */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(WalletTransaction::class);
     }
 }
