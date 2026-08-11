@@ -37,7 +37,8 @@ class CircuitBreaker
 
     public function recordFailure(string $key): void
     {
-        $failures = (int) Cache::get($this->failuresKey($key), 0) + 1;
+        $current = Cache::get($this->failuresKey($key), 0);
+        $failures = (is_int($current) ? $current : 0) + 1;
 
         Cache::put($this->failuresKey($key), $failures, now()->addSeconds(self::COOLDOWN_SECONDS));
 

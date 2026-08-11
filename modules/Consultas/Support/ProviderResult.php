@@ -12,15 +12,15 @@ use Modules\Consultas\Enums\ProviderOutcome;
  * Built through the named constructors so an impossible state — a Failed result
  * carrying data, or a Success with no data — cannot be assembled.
  */
-final class ProviderResult
+final readonly class ProviderResult
 {
     /**
      * @param  array<string, mixed>  $data
      */
     private function __construct(
-        private readonly ProviderOutcome $outcome,
-        private readonly array $data,
-        private readonly ?string $reason,
+        private ProviderOutcome $outcome,
+        private array $data,
+        private ?string $reason,
     ) {}
 
     /**

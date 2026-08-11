@@ -14,12 +14,12 @@ use Illuminate\Support\Str;
  * never reach a log or an audit row. Short values are left alone — there is
  * nothing to hide in a two-letter state code.
  */
-final class ConsultaInput
+final readonly class ConsultaInput
 {
     /**
      * @param  array<string, string>  $params
      */
-    private function __construct(private readonly array $params) {}
+    private function __construct(private array $params) {}
 
     /**
      * @param  array<string, string>  $params

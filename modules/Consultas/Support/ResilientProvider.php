@@ -17,7 +17,7 @@ use Throwable;
  * NoData is never retried and never counts against the breaker — it is a real
  * answer. Only Failed does both.
  */
-final class ResilientProvider
+final readonly class ResilientProvider
 {
     /**
      * Tentativas no total (não retentativas): 2 = uma repetição.
@@ -25,13 +25,13 @@ final class ResilientProvider
     public const int MAX_TRIES = 2;
 
     /**
-     * @param  (Closure(int): void)|null  $sleep
+     * @param  (Closure(int): void)|null  $backoff
      */
     public function __construct(
-        private readonly ProviderContract $inner,
-        private readonly CircuitBreaker $breaker,
-        private readonly int $maxTries = self::MAX_TRIES,
-        private readonly ?Closure $sleep = null,
+        private ProviderContract $inner,
+        private CircuitBreaker $breaker,
+        private int $maxTries = self::MAX_TRIES,
+        private ?Closure $backoff = null,
     ) {}
 
     public function execute(ConsultaInput $input): ProviderResult
@@ -76,8 +76,8 @@ final class ResilientProvider
 
     private function backoff(int $attempt): void
     {
-        if ($this->sleep !== null) {
-            ($this->sleep)($attempt);
+        if ($this->backoff instanceof Closure) {
+            ($this->backoff)($attempt);
 
             return;
         }
@@ -85,6 +85,6 @@ final class ResilientProvider
         // Espera crescente entre tentativas, em milissegundos. Sob requisição
         // síncrona o breaker é a proteção principal; a repetição é para a falha
         // transitória, não para insistir num provider fora do ar.
-        usleep($attempt * 200_000);
+        \Illuminate\Support\Sleep::usleep($attempt * 200_000);
     }
 }

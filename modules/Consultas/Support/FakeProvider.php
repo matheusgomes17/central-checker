@@ -17,7 +17,7 @@ use Throwable;
 final class FakeProvider implements ProviderContract
 {
     /**
-     * @param  array<int, ProviderResult>  $results
+     * @param  list<ProviderResult>  $results
      */
     private function __construct(
         private readonly array $results,
@@ -28,6 +28,8 @@ final class FakeProvider implements ProviderContract
 
     public static function returning(ProviderResult ...$results): self
     {
+        $results = array_values($results);
+
         return new self($results === [] ? [ProviderResult::noData()] : $results);
     }
 
@@ -53,18 +55,24 @@ final class FakeProvider implements ProviderContract
         $index = $this->calls;
         $this->calls++;
 
-        if ($this->throws !== null) {
+        if ($this->throws instanceof Throwable) {
             throw $this->throws;
         }
 
         // Repete o último resultado quando as chamadas passam do combinado, para
         // que um teste de retry não precise enfileirar um resultado por tentativa.
-        return $this->results[$index] ?? $this->results[array_key_last($this->results)];
+        // Índice por count() em vez de array_key_last(): este último devolve
+        // int|string|null, e o null (lista vazia) não é uma chave válida aqui —
+        // returning() sempre garante ao menos um resultado; throwing() já
+        // lançou/retornou antes de chegar nesta linha.
+        $lastIndex = count($this->results) - 1;
+
+        return $this->results[$index] ?? $this->results[$lastIndex];
     }
 
     public function healthCheck(): bool
     {
-        return $this->throws === null;
+        return ! $this->throws instanceof Throwable;
     }
 
     public function calls(): int

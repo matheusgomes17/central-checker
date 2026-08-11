@@ -14,9 +14,9 @@ use Modules\Consultas\Models\Consulta;
  * two things agreeing — the operator's manual status and the breaker being
  * closed for the provider behind it.
  */
-final class ConsultaAvailability
+final readonly class ConsultaAvailability
 {
-    public function __construct(private readonly CircuitBreaker $breaker) {}
+    public function __construct(private CircuitBreaker $breaker) {}
 
     public function available(Consulta $consulta): bool
     {

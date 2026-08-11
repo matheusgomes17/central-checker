@@ -20,11 +20,14 @@ class ConsultaFactory extends Factory
      */
     public function definition(): array
     {
-        $name = $this->faker->unique()->words(2, true);
+        // words() is typed array|string upstream (it flips on $asText), então
+        // montamos o nome com duas chamadas a word() — cada uma tipada string —
+        // para não carregar essa união adiante.
+        $name = $this->faker->unique()->word().' '.$this->faker->unique()->word();
 
         return [
             'slug' => str($name)->slug()->value(),
-            'name' => ucfirst((string) $name),
+            'name' => ucfirst($name),
             'description' => $this->faker->sentence(),
             'category' => 'cadastral',
             'provider_key' => 'fake',
