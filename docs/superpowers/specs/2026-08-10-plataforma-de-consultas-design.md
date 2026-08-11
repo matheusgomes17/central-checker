@@ -319,10 +319,14 @@ plano de implementação próprio.
   política charge-on-success plugada na action `ExecutarConsulta`. Crédito manual
   do admin.
 - **C — Módulo `Pagamentos` (VirtualPay).** Abstração, recarga Pix, webhook
-  assinado e idempotente, crédito na carteira por evento. **Remove Cashier/Stripe.**
+  assinado e idempotente, crédito na carteira por evento. **Só adiciona** — a
+  remoção do Cashier/Stripe foi movida para a Fase D (decisão do usuário: tirar a
+  cobrança de plano antes de construir a substituta deixaria o produto sem billing
+  de plano no intervalo).
 - **D — Planos e assinatura.** `plan_consultas`, franquia + contadores, gating,
   assinatura como ciclo pré-pago renovável (compra e renovação de plano via Pix
-  avulso), estados, overrides por usuário.
+  avulso), estados, overrides por usuário. **Remove Cashier/Stripe** aqui, junto
+  com a assinatura pré-paga que o substitui.
 - **E — Admin Filament.** Resources, relatórios, saúde de provider, gestão por
   usuário.
 - **F — Frontend.** Migração/redesign do layout, telas do usuário, LGPD na tela.
