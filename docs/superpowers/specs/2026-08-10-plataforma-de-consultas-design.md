@@ -221,6 +221,19 @@ Desenho:
   transação; isso é a porta de fraude nº 1 dele e **não** se repete aqui.
   Idempotência pelo `id` da transação para o gateway reentregar sem processar duas
   vezes.
+- **Esquema da assinatura — confirmado no código-fonte do gateway** (fase C+):
+  `hash_hmac('sha256', json_encode($payload, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE), $secret)`,
+  hex, via Spatie WebhookServer (`GatewayWebhookSigner`). Esse `json_encode` **é**
+  o corpo cru que o gateway envia, então o verificador só precisa aplicar
+  `hash_hmac('sha256', $corpoCru, $secret)` sobre `$request->getContent()` — nunca
+  sobre um array re-serializado (a ordem/escape dos flags mudaria e a assinatura
+  quebraria). O `$secret` é um **segredo por webhook** que o dono do gateway
+  **digita** ao cadastrar o endpoint (`merchant_webhooks.secret`, texto puro, sem
+  geração automática nem API para buscá-lo) — os dois lados usam o mesmo valor.
+  Em dev local, o comando `php artisan virtualpay:webhook-secret <valor>` troca o
+  segredo no `.env` sem edição manual. O evento real é `deposit.paid`; `amount`
+  vem em reais decimais, mas o crédito usa o `amount_cents` do `PaymentIntent`, não
+  o do payload.
 - **Credenciais em `.env` / cifradas, nunca em código.** O legado deixa
   `client-id` e `client-secret` embutidos num arquivo versionável — as do legado
   precisam ser **rotacionadas** antes de qualquer uso, porque já vazaram.
