@@ -22,9 +22,8 @@ class SubscriptionStatusTest extends TestCase
     public static function statusesThatNeedAttention(): array
     {
         return [
-            'pagamento falhando' => [SubscriptionStatus::PastDue],
-            'cancelamento agendado' => [SubscriptionStatus::Cancelling],
-            'assinatura encerrada' => [SubscriptionStatus::Ended],
+            'marcada para não renovar' => [SubscriptionStatus::Expiring],
+            'período acabou' => [SubscriptionStatus::Expired],
         ];
     }
 

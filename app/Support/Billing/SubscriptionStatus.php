@@ -7,30 +7,27 @@ namespace App\Support\Billing;
 /**
  * The billing states the product has to behave differently in.
  *
- * Cashier answers with a handful of overlapping true/false answers — subscribed, on
- * trial, past due, on grace period — and reading them at each call site is how
- * two screens end up disagreeing about the same account. This is the single
- * reading of them.
+ * The subscription is prepaid via Pix: there is no gateway retrying a failed
+ * charge, so there is no "past due" state. A period either still has time
+ * left or it does not — reading that boundary consistently at every call
+ * site is the point of this enum.
  */
 enum SubscriptionStatus: string
 {
-    /** Nunca assinou, ou o período pago acabou. */
+    /** Nunca assinou; no plano gratuito. */
     case None = 'none';
 
-    /** Testando, sem cartão. */
+    /** Em trial (prazo), acesso ao gratuito. */
     case Trialing = 'trialing';
 
-    /** Pagando e em dia. */
+    /** Assinatura paga, período no futuro. */
     case Active = 'active';
 
-    /** Cobrança falhou e a Stripe ainda está tentando. */
-    case PastDue = 'past_due';
+    /** Assinatura ativa marcada para não renovar; ainda tem acesso até o fim do período. */
+    case Expiring = 'expiring';
 
-    /** Cancelou, mas o período já pago ainda não acabou. */
-    case Cancelling = 'cancelling';
-
-    /** Acabou de vez. */
-    case Ended = 'ended';
+    /** Período acabou; caiu no plano gratuito (acesso normal ao gratuito, não é bloqueio). */
+    case Expired = 'expired';
 
     public function label(): string
     {
@@ -38,9 +35,8 @@ enum SubscriptionStatus: string
             self::None => __('No subscription'),
             self::Trialing => __('Trial'),
             self::Active => __('Active'),
-            self::PastDue => __('Payment failing'),
-            self::Cancelling => __('Cancelling'),
-            self::Ended => __('Ended'),
+            self::Expiring => __('Expiring'),
+            self::Expired => __('Expired'),
         };
     }
 
@@ -48,9 +44,8 @@ enum SubscriptionStatus: string
     {
         return match ($this) {
             self::Active, self::Trialing => 'success',
-            self::PastDue => 'danger',
-            self::Cancelling => 'warning',
-            self::None, self::Ended => 'gray',
+            self::Expiring, self::Expired => 'warning',
+            self::None => 'gray',
         };
     }
 
@@ -59,6 +54,6 @@ enum SubscriptionStatus: string
      */
     public function needsAttention(): bool
     {
-        return in_array($this, [self::PastDue, self::Cancelling, self::Ended], true);
+        return in_array($this, [self::Expiring, self::Expired], true);
     }
 }
