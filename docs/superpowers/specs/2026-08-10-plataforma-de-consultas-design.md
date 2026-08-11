@@ -138,6 +138,16 @@ receber dado com saldo para um só. Então:
 O hold expira sozinho (job) para o caso de o processo morrer entre reservar e
 confirmar — hold órfão que não expira é saldo preso para sempre.
 
+**Aresta conhecida (implementada na Fase B, a fechar quando a execução virar
+assíncrona):** se o provider responde com sucesso mas o `confirmar(hold)` falha
+no commit — deadlock — ou se o hold expira no meio de uma chamada longa, a
+execução é gravada como `success` e o hold é solto. O resultado é **cobrar a
+menos, nunca a mais**, e o saldo nunca fica negativo; a execução continua
+auditável. Com execução síncrona e timeout curto isso é raríssimo. Quando a
+execução passar para job com progresso (fora do escopo de A/B), o confirmar deve
+acontecer na mesma unidade de trabalho que registra o sucesso, ou o sucesso só
+ser gravado depois do débito confirmado.
+
 > A reserva é o coração da correção do sistema. Precisa ser vista falhar: remover
 > o `FOR UPDATE` da leitura de saldo, disparar duas execuções concorrentes com
 > saldo para uma, e provar que a suíte acusa saldo negativo.
