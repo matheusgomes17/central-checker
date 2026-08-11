@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Billing;
 
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\Billing\Plan;
@@ -15,11 +16,10 @@ use InvalidArgumentException;
 use Tests\TestCase;
 
 /**
- * Cashier answers with a handful of overlapping true/false answers, and reading them at
- * each call site is how two screens end up disagreeing about one account.
- * These tests pin down the single reading of them, state by state, without
- * talking to Stripe: every subscription here is a row, which is exactly what
- * Cashier itself inspects.
+ * TeamBilling answers a handful of overlapping true/false questions, and
+ * reading them at each call site is how two screens end up disagreeing about
+ * one account. These tests pin down the single reading of them, state by
+ * state, against the in-house `PlanSubscription` row — no Stripe involved.
  */
 class TeamBillingTest extends TestCase
 {
@@ -57,7 +57,7 @@ class TeamBillingTest extends TestCase
 
     public function test_an_active_subscription_puts_the_team_on_its_plan(): void
     {
-        $billing = TeamBilling::for($this->subscribed('price_pro', 'active'));
+        $billing = TeamBilling::for($this->subscribed('pro'));
 
         $this->assertSame('pro', $billing->plan()->key);
         $this->assertSame(SubscriptionStatus::Active, $billing->status());
@@ -97,39 +97,29 @@ class TeamBillingTest extends TestCase
     }
 
     /**
-     * Pulling access on the first failed charge punishes an expired card.
-     * While Stripe retries, the team keeps what it was paying for.
-     */
-    public function test_a_failing_payment_keeps_access_while_stripe_retries(): void
-    {
-        $billing = TeamBilling::for($this->subscribed('price_pro', 'past_due'));
-
-        $this->assertSame(SubscriptionStatus::PastDue, $billing->status());
-        $this->assertTrue($billing->hasAccess());
-        $this->assertTrue($billing->paymentFailing());
-        $this->assertSame('pro', $billing->plan()->key);
-    }
-
-    /**
-     * Cancelling does not end the period already paid for.
+     * Cancelling does not end the period already paid for: a subscription
+     * marked not to renew still counts as subscribed until the period ends.
      */
     public function test_a_cancelled_subscription_keeps_access_until_the_period_ends(): void
     {
-        $team = $this->subscribed('price_pro', 'active', endsAt: now()->addDays(10));
+        $team = $this->subscribed('pro', canceling: true, endsAt: now()->addDays(10));
 
         $billing = TeamBilling::for($team);
 
-        $this->assertSame(SubscriptionStatus::Cancelling, $billing->status());
-        $this->assertTrue($billing->hasAccess());
+        $this->assertTrue($billing->subscribed());
+        $this->assertTrue($billing->onGracePeriod());
+        $this->assertSame(SubscriptionStatus::Expiring, $billing->status());
+        $this->assertSame('pro', $billing->plan()->key);
     }
 
     public function test_a_subscription_past_its_end_grants_nothing(): void
     {
-        $team = $this->subscribed('price_pro', 'canceled', endsAt: now()->subDay());
+        $team = Team::factory()->create();
+        PlanSubscription::factory()->expired()->create(['team_id' => $team->id, 'plan' => 'pro']);
 
         $billing = TeamBilling::for($team);
 
-        $this->assertSame(SubscriptionStatus::Ended, $billing->status());
+        $this->assertSame(SubscriptionStatus::Expired, $billing->status());
         $this->assertFalse($billing->hasAccess());
         $this->assertSame(Plan::default()->key, $billing->plan()->key);
     }
@@ -152,7 +142,7 @@ class TeamBillingTest extends TestCase
      */
     public function test_a_plan_without_a_ceiling_reports_null_rather_than_zero(): void
     {
-        $team = $this->subscribed('price_business', 'active');
+        $team = $this->subscribed('business');
 
         $usage = TeamBilling::for($team)->usage('members');
 
@@ -259,19 +249,18 @@ class TeamBillingTest extends TestCase
         $this->assertTrue(Plan::find('pro')->isFree());
     }
 
-    private function subscribed(string $price, string $status, ?CarbonInterface $endsAt = null): Team
+    private function subscribed(string $plan = 'pro', bool $canceling = false, ?CarbonInterface $endsAt = null): Team
     {
-        $team = Team::factory()->create(['stripe_id' => 'cus_'.fake()->uuid()]);
+        $team = Team::factory()->create();
 
-        $team->subscriptions()->create([
-            'type' => TeamBilling::SUBSCRIPTION,
-            'stripe_id' => 'sub_'.fake()->uuid(),
-            'stripe_status' => $status,
-            'stripe_price' => $price,
-            'quantity' => 1,
-            'ends_at' => $endsAt,
+        PlanSubscription::factory()->create([
+            'team_id' => $team->id,
+            'plan' => $plan,
+            'current_period_start' => now()->subDay(),
+            'current_period_end' => $endsAt ?? now()->addDays(30),
+            'canceled_at' => $canceling ? now() : null,
         ]);
 
-        return $team->refresh();
+        return $team;
     }
 }

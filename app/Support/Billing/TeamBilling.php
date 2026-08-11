@@ -14,23 +14,26 @@ use Illuminate\Support\Facades\Config;
  * Everything else in the application asks this and nothing else: which plan,
  * which limits, whether the account is in good standing. Scattering those
  * questions would mean each caller inventing its own idea of what "subscribed"
- * covers — and Cashier's own vocabulary is subtle enough that they would
- * disagree.
+ * covers.
  *
- * The subtleties worth stating, because they are where billing bugs live:
+ * The subscription is read from our own in-house `PlanSubscription` table —
+ * prepaid via Pix, resolved through `Subscriptions` — and not from Cashier
+ * anymore. The subtleties worth stating, because they are where billing bugs
+ * live:
  *
- * - `subscribed()` stays true through the cancellation grace period. Someone
- *   who cancelled today keeps what they paid for until the period ends.
- * - `subscribed()` is false while a payment is `past_due` or `incomplete`.
- *   Stripe is still retrying; the account is not cancelled, but it is not in
- *   good standing either.
- * - a trial has no subscription record at all when it is card-free, so trial
- *   state has to be read from the team, not from a subscription.
+ * - `subscribed()` is true whenever there is a subscription whose paid period
+ *   has not ended yet. A cancellation does not end the period already paid
+ *   for: a subscription marked not to renew but still inside its period
+ *   counts as subscribed, and shows up as `Expiring`.
+ * - a trial has no subscription record at all — it is read from the team's
+ *   `trial_ends_at` — and grants access to the free plan, not to a paid one.
+ *   The prepaid trial exists to try the product; buying a paid plan is a
+ *   purchase, not something a trial stands in for.
+ * - there is no payment-failing state. Pix has no gateway retrying a failed
+ *   charge: a period either still has time left or it does not.
  */
 final readonly class TeamBilling
 {
-    public const string SUBSCRIPTION = 'default';
-
     public function __construct(private Team $team) {}
 
     public static function for(Team $team): self
@@ -41,35 +44,19 @@ final readonly class TeamBilling
     /**
      * The plan the team is entitled to right now.
      *
-     * A team on trial gets the plan under trial; one whose payment is
-     * failing keeps its plan while Stripe retries, because pulling access on
-     * the first failed charge punishes an expired card.
+     * A team on trial is on the free plan: the trial is for trying the
+     * product, not a stand-in for a paid plan nobody bought.
      */
     public function plan(): Plan
     {
-        // A assinatura encerrada continua na tabela, com o preço que teve. Ler
-        // o preço sem olhar o acesso deixaria um time cancelado no plano pago
-        // para sempre.
-        if (! $this->hasAccess()) {
-            return Plan::default();
-        }
+        $active = resolve(Subscriptions::class)->active($this->team);
 
-        $price = $this->team->subscription(self::SUBSCRIPTION)?->stripe_price;
-
-        return Plan::forPriceId($price) ?? Plan::default();
+        return $active !== null ? (Plan::find($active->plan) ?? Plan::default()) : Plan::default();
     }
 
     public function onTrial(): bool
     {
-        // O onTrial() do Cashier só consulta o teste sem cartão quando é
-        // chamado sem nenhum argumento — informar o tipo desliga essa
-        // checagem. Como o teste daqui é sem cartão, ele não tem assinatura
-        // para consultar, e os dois casos precisam ser perguntados.
-        if ($this->team->onGenericTrial()) {
-            return true;
-        }
-
-        return $this->team->onTrial(self::SUBSCRIPTION);
+        return ! $this->subscribed() && ($this->team->trial_ends_at?->isFuture() === true);
     }
 
     public function trialEndsAt(): ?CarbonInterface
@@ -78,87 +65,67 @@ final readonly class TeamBilling
     }
 
     /**
-     * Whether the team is paying and in good standing.
+     * Whether the team has a paid period that has not ended yet.
      */
     public function subscribed(): bool
     {
-        return $this->team->subscribed(self::SUBSCRIPTION);
+        return resolve(Subscriptions::class)->active($this->team) !== null;
     }
 
     /**
-     * Cancelled but still inside the period already paid for.
+     * Marked not to renew but still inside the period already paid for.
      */
     public function onGracePeriod(): bool
     {
-        return $this->team->subscription(self::SUBSCRIPTION)?->onGracePeriod() ?? false;
+        return resolve(Subscriptions::class)->active($this->team)?->isExpiring() ?? false;
     }
 
     /**
-     * Stripe is retrying a failed charge.
-     *
-     * Distinct from cancelled: nobody chose this, and the way out is a new
-     * card rather than a new subscription.
+     * There is no payment-failing state in the prepaid model: Pix has no
+     * gateway retrying a failed charge, so there is nothing to be "failing".
      */
     public function paymentFailing(): bool
     {
-        $subscription = $this->team->subscription(self::SUBSCRIPTION);
-
-        return $subscription instanceof \Laravel\Cashier\Subscription && ($subscription->pastDue() || $subscription->incomplete());
+        return false;
     }
 
     /**
-     * The subscription is over and the paid period with it.
+     * The team once subscribed, but no paid period is active now.
      */
     public function ended(): bool
     {
-        return $this->team->subscription(self::SUBSCRIPTION)?->ended() ?? false;
+        $subscriptions = resolve(Subscriptions::class);
+
+        return $subscriptions->active($this->team) === null
+            && $subscriptions->everSubscribed($this->team)
+            && ! $this->onTrial();
     }
 
     /**
      * Whether the team may use paid capability at all.
      *
-     * Trial and grace period both count; a failing payment counts too, for as
-     * long as Stripe keeps retrying. What does not count is having never
-     * subscribed, or having reached the end of a cancelled period.
+     * Trial and grace period both count. What does not count is having never
+     * subscribed, or having reached the end of a period nobody renewed.
      */
     public function hasAccess(): bool
     {
-        if ($this->subscribed()) {
-            return true;
-        }
-        if ($this->onTrial()) {
-            return true;
-        }
-
-        return $this->paymentFailing();
+        return $this->subscribed() || $this->onTrial();
     }
 
     /**
-     * Whether the team may still change things.
-     *
-     * Read-only is the end of the line described by the plan: payment fails,
-     * Stripe retries, the retries run out, and the subscription ends. What is
-     * left is an account that can be read and paid for, but not added to.
-     *
-     * A team that never subscribed is *not* here. It is on the free plan, with
-     * the free plan's limits, doing exactly what it is entitled to. Suspending
-     * it would turn "did not buy" into "did something wrong".
+     * There is no read-only suspension in the prepaid model: a period ending
+     * drops the team to the free plan with the free plan's ordinary access,
+     * it does not lock the account. Keep this `false` — do not "fix" it back
+     * into a suspension state.
      */
     public function isReadOnly(): bool
     {
-        return $this->status() === SubscriptionStatus::Ended;
+        return false;
     }
 
     public function status(): SubscriptionStatus
     {
-        return match (true) {
-            $this->onTrial() => SubscriptionStatus::Trialing,
-            $this->paymentFailing() => SubscriptionStatus::PastDue,
-            $this->onGracePeriod() => SubscriptionStatus::Cancelling,
-            $this->subscribed() => SubscriptionStatus::Active,
-            $this->ended() => SubscriptionStatus::Ended,
-            default => SubscriptionStatus::None,
-        };
+        return resolve(Subscriptions::class)->statusFor($this->team);
     }
 
     /**

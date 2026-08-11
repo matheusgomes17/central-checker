@@ -9,6 +9,7 @@ use App\Enums\TeamRole;
 use App\Exceptions\PlanFeatureException;
 use App\Http\Middleware\SetTenantFromToken;
 use App\Models\ApiToken;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\Billing\TeamBilling;
@@ -91,10 +92,7 @@ class PlanFeatureTest extends TestCase
 
         $this->withToken($token)->getJson('/api/v1/team')->assertOk();
 
-        $team->subscription(TeamBilling::SUBSCRIPTION)?->update([
-            'stripe_status' => 'canceled',
-            'ends_at' => now()->subDay(),
-        ]);
+        PlanSubscription::query()->where('team_id', $team->id)->update(['current_period_end' => now()->subDay()]);
         $this->asANewRequestWould();
 
         $this->withToken($token)->getJson('/api/v1/team')->assertStatus(402);
@@ -226,14 +224,6 @@ class PlanFeatureTest extends TestCase
 
     private function subscribe(Team $team): void
     {
-        $team->subscriptions()->create([
-            'type' => TeamBilling::SUBSCRIPTION,
-            'stripe_id' => 'sub_'.fake()->uuid(),
-            'stripe_status' => 'active',
-            'stripe_price' => 'price_pro',
-            'quantity' => 1,
-        ]);
-
-        $team->refresh();
+        PlanSubscription::factory()->active()->create(['team_id' => $team->id, 'plan' => 'pro']);
     }
 }
