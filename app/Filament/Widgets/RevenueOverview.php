@@ -4,21 +4,23 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Models\PlanSubscription;
+use App\Models\Team;
 use App\Support\Billing\Plan;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Illuminate\Support\Facades\Config;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Number;
-use Laravel\Cashier\Subscription;
 use Override;
 
 /**
- * Recurring revenue and churn, computed from the local subscription rows.
+ * Recurring revenue and churn, computed from the local prepaid subscription
+ * rows.
  *
- * Deliberately not asked of Stripe. A dashboard that makes an API call per
- * page load is a dashboard that breaks when Stripe is slow, and these rows are
- * kept in step by the webhooks anyway — if they are wrong, the number being
- * wrong is the symptom worth seeing.
+ * Deliberately not asked of an external API. A dashboard that makes a network
+ * call per page load is a dashboard that breaks when that service is slow,
+ * and these rows are the source of truth for the prepaid model anyway — if
+ * they are wrong, the number being wrong is the symptom worth seeing.
  *
  * Trials are excluded from revenue: money that has not been charged is not
  * revenue, and counting it is how a forecast turns into a fiction.
@@ -48,46 +50,62 @@ class RevenueOverview extends StatsOverviewWidget
     }
 
     /**
-     * Sum of the monthly price of every subscription actually being charged.
+     * Sum of the monthly-normalized price of every active subscription.
+     *
+     * Normalizing to 30 days keeps MRR honest if a plan's period is not
+     * exactly a month long.
      */
     private function monthlyRecurringRevenue(): int
     {
-        $prices = Plan::all();
-
-        return Subscription::query()
-            ->whereIn('stripe_status', ['active', 'past_due'])
-            ->whereNull('ends_at')
+        return $this->activeSubscriptions()
             ->get()
-            ->sum(function (Subscription $subscription) use ($prices): int {
-                foreach ($prices as $plan) {
-                    if ($plan->priceId !== null && $plan->priceId === $subscription->stripe_price) {
-                        return $plan->price * max(1, (int) $subscription->quantity);
-                    }
-                }
+            ->sum(function (PlanSubscription $subscription): int {
+                $plan = Plan::find($subscription->plan);
 
-                return 0;
+                return $plan->periodDays > 0
+                    ? (int) round($plan->price * 30 / $plan->periodDays)
+                    : $plan->price;
             });
     }
 
     private function payingCount(): int
     {
-        return Subscription::query()
-            ->whereIn('stripe_status', ['active', 'past_due'])
-            ->whereNull('ends_at')
-            ->count();
+        return $this->activeSubscriptions()->count();
     }
 
+    /**
+     * Teams inside their trial window.
+     *
+     * An admin-widget approximation: it does not subtract teams that also
+     * have an active subscription, so a team that upgraded mid-trial is
+     * counted here as well as among the paying subscriptions.
+     */
     private function trialingCount(): int
     {
-        return Subscription::query()->where('stripe_status', 'trialing')->count();
+        return Team::query()->where('trial_ends_at', '>', now())->count();
     }
 
+    /**
+     * Paid periods that lapsed without renewing, in the last `$days` days.
+     *
+     * A subscription whose `current_period_end` falls in the window and was
+     * not extended is a lapse: a renewal would have pushed
+     * `current_period_end` into the future, so a renewed row would not match
+     * this range at all.
+     */
     private function cancelledWithin(int $days): int
     {
-        return Subscription::query()
-            ->whereNotNull('ends_at')
-            ->where('ends_at', '>=', now()->subDays($days))
+        return PlanSubscription::query()
+            ->whereBetween('current_period_end', [now()->subDays($days), now()])
             ->count();
+    }
+
+    /**
+     * @return Builder<PlanSubscription>
+     */
+    private function activeSubscriptions(): Builder
+    {
+        return PlanSubscription::query()->where('current_period_end', '>', now());
     }
 
     /**
@@ -108,17 +126,11 @@ class RevenueOverview extends StatsOverviewWidget
     }
 
     /**
-     * Formatted with the currency and locale Cashier is configured with.
-     *
-     * Written by hand this became a branch per currency, which is the kind of
-     * thing that is right until the second currency shows up.
+     * Formatted in reais: the product is billed via Pix, so BRL/pt_BR is not
+     * configuration, it is the only currency this application ever charges.
      */
     private function formatMoney(int $cents): string
     {
-        return (string) Number::currency(
-            $cents / 100,
-            in: strtoupper(Config::string('cashier.currency')),
-            locale: Config::string('cashier.currency_locale'),
-        );
+        return (string) Number::currency($cents / 100, in: 'BRL', locale: 'pt_BR');
     }
 }

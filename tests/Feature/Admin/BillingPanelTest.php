@@ -8,12 +8,11 @@ use App\Enums\SystemRole;
 use App\Filament\Resources\Subscriptions\Pages\ListSubscriptions;
 use App\Filament\Resources\Subscriptions\SubscriptionResource;
 use App\Filament\Widgets\RevenueOverview;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
-use App\Support\Billing\TeamBilling;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Cashier\Subscription;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -27,15 +26,6 @@ class BillingPanelTest extends TestCase
 
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        config([
-            'billing.plans.pro.price_id' => 'price_pro',
-            'billing.plans.business.price_id' => 'price_business',
-            // Fixado aqui para que a asserção do formato não dependa do
-            // ambiente de quem roda a suíte.
-            'cashier.currency' => 'brl',
-            'cashier.currency_locale' => 'pt_BR',
-        ]);
-
         $admin = User::factory()->create();
         $admin->setSystemRole(SystemRole::SuperAdmin);
         $admin->refresh();
@@ -45,7 +35,7 @@ class BillingPanelTest extends TestCase
 
     public function test_the_subscriptions_list_loads(): void
     {
-        $subscription = $this->subscription('price_pro', 'active');
+        $subscription = PlanSubscription::factory()->active()->for(Team::factory())->create();
 
         $component = Livewire::test(ListSubscriptions::class);
 
@@ -54,8 +44,8 @@ class BillingPanelTest extends TestCase
     }
 
     /**
-     * Stripe owns these rows; the panel keeps a copy that webhooks maintain.
-     * Editing it here would put the copy and the source out of step, and the
+     * The payment webhook owns these rows; the panel keeps a read-only copy.
+     * Editing it here would put the panel and the source out of step, and the
      * next webhook would silently undo whatever was typed.
      */
     public function test_subscriptions_cannot_be_edited_from_the_panel(): void
@@ -64,14 +54,12 @@ class BillingPanelTest extends TestCase
         $this->assertSame(['index'], array_keys(SubscriptionResource::getPages()));
     }
 
-    public function test_the_revenue_widget_sums_only_what_is_being_charged(): void
+    public function test_the_revenue_widget_sums_only_active_subscriptions(): void
     {
-        $this->subscription('price_pro', 'active');          // 49,00
-        $this->subscription('price_business', 'active');     // 199,00
-        $this->subscription('price_pro', 'trialing');        // não conta
-        $this->subscription('price_pro', 'canceled', endsAt: now()->subDay()); // não conta
+        PlanSubscription::factory()->active()->for(Team::factory())->create(['plan' => 'pro']); // 49,00
+        PlanSubscription::factory()->expired()->for(Team::factory())->create(['plan' => 'business']); // não conta
 
-        Livewire::test(RevenueOverview::class)->assertOk()->assertSee('248,00');
+        Livewire::test(RevenueOverview::class)->assertOk()->assertSee('49,00');
     }
 
     /**
@@ -80,7 +68,7 @@ class BillingPanelTest extends TestCase
      */
     public function test_a_trial_is_reported_separately_from_revenue(): void
     {
-        $this->subscription('price_pro', 'trialing');
+        Team::factory()->create(['trial_ends_at' => now()->addDays(7)]);
 
         // Sem o símbolo: o ICU insere espaço não separável entre a moeda e o
         // número, que sai escapado no HTML e nunca casaria literalmente.
@@ -96,25 +84,5 @@ class BillingPanelTest extends TestCase
     public function test_churn_is_zero_when_there_is_nothing_to_lose(): void
     {
         Livewire::test(RevenueOverview::class)->assertOk()->assertSee('0%');
-    }
-
-    private function subscription(string $price, string $status, ?\Carbon\CarbonInterface $endsAt = null): Subscription
-    {
-        $team = Team::factory()->create([
-            'is_personal' => false,
-            'stripe_id' => 'cus_'.fake()->uuid(),
-        ]);
-
-        /** @var Subscription $subscription */
-        $subscription = $team->subscriptions()->create([
-            'type' => TeamBilling::SUBSCRIPTION,
-            'stripe_id' => 'sub_'.fake()->uuid(),
-            'stripe_status' => $status,
-            'stripe_price' => $price,
-            'quantity' => 1,
-            'ends_at' => $endsAt,
-        ]);
-
-        return $subscription;
     }
 }

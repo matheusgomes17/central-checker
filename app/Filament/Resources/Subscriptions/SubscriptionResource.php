@@ -6,23 +6,23 @@ namespace App\Filament\Resources\Subscriptions;
 
 use App\Filament\Resources\Subscriptions\Pages\ListSubscriptions;
 use App\Filament\Resources\Subscriptions\Tables\SubscriptionsTable;
+use App\Models\PlanSubscription;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use Laravel\Cashier\Subscription;
 use Override;
 
 /**
- * Read-only, because Stripe owns these rows.
+ * Read-only, because the payment webhook owns these rows.
  *
- * Everything here is a local copy kept in step by webhooks. Editing it in the
- * panel would put the copy and the source of truth out of step, and the next
+ * Every row here is written by the VirtualPay/Pix webhook. Editing it in the
+ * panel would put the panel and the source of truth out of step, and the next
  * webhook would silently undo whatever was typed.
  */
 class SubscriptionResource extends Resource
 {
-    protected static ?string $model = Subscription::class;
+    protected static ?string $model = PlanSubscription::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCreditCard;
 
