@@ -50,6 +50,14 @@ class VirtualPayWebhookController extends Controller
             return response('', 200);
         }
 
+        if (blank($externalId) && blank($reference)) {
+            // Sem os dois, where('external_id', null) viraria whereNull() e
+            // casaria com qualquer intent pendente que ainda não tem
+            // external_id — um evento malformado (mas assinado) poderia
+            // creditar um intent arbitrário. Sem identificador, não é nosso.
+            return response('', 200);
+        }
+
         $intent = PaymentIntent::acrossTenants()
             ->where(fn ($query) => $query->where('external_id', $externalId)->orWhere('reference', $reference))
             ->first();

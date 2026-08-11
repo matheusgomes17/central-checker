@@ -145,6 +145,27 @@ it('evento desconhecido ou status diferente de paid devolve 200 sem creditar', f
         ->and(Wallet::forTeam($team)->balance_cents)->toBe(0);
 });
 
+it('evento sem transaction_id e sem reference devolve 200 e não credita nenhum intent', function (): void {
+    $team = Team::factory()->create();
+    // Sem external_id: é justamente o intent que where('external_id', null)
+    // casaria por engano se o guard de identificador ausente não existisse.
+    $intent = PaymentIntent::factory()->for($team)->create(['amount_cents' => 5000]);
+
+    $response = postSignedWebhook([
+        'event' => 'deposit.paid',
+        'data' => [
+            'status' => 'paid',
+        ],
+    ]);
+
+    $response->assertOk();
+
+    resolve(TenantManager::class)->set($team);
+
+    expect($intent->fresh()->status)->toBe(PaymentStatus::Pending)
+        ->and(Wallet::forTeam($team)->balance_cents)->toBe(0);
+});
+
 it('transaction_id/reference desconhecido devolve 200 sem creditar', function (): void {
     $team = Team::factory()->create();
     PaymentIntent::factory()->for($team)->withExternalId('tx_known')->create(['amount_cents' => 5000]);
