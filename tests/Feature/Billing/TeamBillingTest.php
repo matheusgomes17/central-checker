@@ -25,16 +25,6 @@ class TeamBillingTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        config([
-            'billing.plans.pro.price_id' => 'price_pro',
-            'billing.plans.business.price_id' => 'price_business',
-        ]);
-    }
-
     public function test_a_team_with_no_subscription_is_on_the_default_plan(): void
     {
         $billing = TeamBilling::for(Team::factory()->create());
@@ -213,40 +203,16 @@ class TeamBillingTest extends TestCase
     }
 
     /**
-     * The one lookup that runs the other way, from Stripe's identifier back to
-     * ours. It exists for webhooks, which speak only Stripe — and a webhook
-     * that resolves the wrong plan moves a paying team to the free one.
-     */
-    public function test_a_price_that_belongs_to_no_plan_resolves_to_nothing(): void
-    {
-        $this->assertSame('pro', Plan::forPriceId('price_pro')?->key);
-
-        // O plano gratuito não tem price id. Sem a saída antecipada, procurar
-        // por "nenhum preço" acharia justamente ele.
-        $this->assertNull(Plan::forPriceId(null));
-        $this->assertNull(Plan::forPriceId(''));
-        $this->assertNull(Plan::forPriceId('price_que_nao_existe'));
-    }
-
-    /**
-     * A plan with no Stripe price cannot be bought, whatever the config says.
+     * A plan that costs nothing is where a team already is by default; it is
+     * not something to buy. Only priced plans belong in the purchasable list.
      */
     public function test_only_plans_with_a_price_are_purchasable(): void
     {
-        $this->assertSame(['pro', 'business'], array_keys(Plan::purchasable()));
-    }
+        $purchasable = array_keys(Plan::purchasable());
 
-    /**
-     * A declared but empty environment variable arrives as an empty string,
-     * not as null. Left alone, the plan would be offered and would only fail
-     * at Stripe, with an error that means nothing to whoever clicked.
-     */
-    public function test_a_plan_whose_price_is_an_empty_string_is_not_purchasable(): void
-    {
-        config(['billing.plans.pro.price_id' => '']);
-
-        $this->assertSame(['business'], array_keys(Plan::purchasable()));
-        $this->assertTrue(Plan::find('pro')->isFree());
+        $this->assertNotContains('free', $purchasable);
+        $this->assertContains('pro', $purchasable);
+        $this->assertContains('business', $purchasable);
     }
 
     private function subscribed(string $plan = 'pro', bool $canceling = false, ?CarbonInterface $endsAt = null): Team

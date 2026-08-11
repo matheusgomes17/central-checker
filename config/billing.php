@@ -11,10 +11,9 @@ return [
     | Planos
     |--------------------------------------------------------------------------
     |
-    | A chave é o identificador interno e nunca muda; o price_id é o da Stripe e
-    | pode trocar entre ambientes ou quando o preço é reajustado. Gravar o
-    | identificador interno em vez do price_id é o que permite reajustar sem
-    | perder de vista quem está em qual plano.
+    | A chave é o identificador interno e nunca muda. O price é o valor da
+    | cobrança Pix, em centavos; period_days é quantos dias dura o período
+    | pago depois que a cobrança é confirmada.
     |
     | Limite null significa "sem limite". Zero significa zero, e é uma resposta
     | diferente.
@@ -33,8 +32,8 @@ return [
 
         'free' => [
             'name' => 'Free',
-            'price_id' => null,
             'price' => 0,
+            'period_days' => 0,
             'limits' => [
                 'members' => 3,
             ],
@@ -44,8 +43,8 @@ return [
 
         'pro' => [
             'name' => 'Pro',
-            'price_id' => env('STRIPE_PRICE_PRO'),
             'price' => 4900,
+            'period_days' => 30,
             'limits' => [
                 'members' => 20,
             ],
@@ -55,8 +54,8 @@ return [
 
         'business' => [
             'name' => 'Business',
-            'price_id' => env('STRIPE_PRICE_BUSINESS'),
             'price' => 19900,
+            'period_days' => 30,
             'limits' => [
                 'members' => null,
             ],

@@ -10,10 +10,9 @@ use InvalidArgumentException;
 /**
  * A plan as the application understands it, read from configuration.
  *
- * The key is the application's own name for the plan and never changes; the
- * Stripe price id belongs to Stripe and does change — between environments,
- * and every time a price is revised. Everything internal keys off the former,
- * which is what makes a price change survivable.
+ * The key is the application's internal name for the plan and never changes.
+ * The price is in cents and drives the Pix charge; period_days is how long a
+ * paid period lasts once the charge is confirmed.
  */
 final readonly class Plan
 {
@@ -24,8 +23,8 @@ final readonly class Plan
     private function __construct(
         public string $key,
         public string $name,
-        public ?string $priceId,
         public int $price,
+        public int $periodDays,
         public array $limits,
         public array $features,
         public int $apiRateLimit,
@@ -54,32 +53,11 @@ final readonly class Plan
     }
 
     /**
-     * The plan a Stripe price belongs to, if any.
-     *
-     * The only place that goes the other way — from Stripe's identifier back
-     * to ours — and it exists for webhooks, which speak only Stripe.
-     */
-    public static function forPriceId(?string $priceId): ?self
-    {
-        if ($priceId === null || $priceId === '') {
-            return null;
-        }
-
-        foreach (self::all() as $plan) {
-            if ($plan->priceId === $priceId) {
-                return $plan;
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * @return array<string, self>
      */
     public static function all(): array
     {
-        /** @var array<string, array{name: string, price_id: string|null, price: int, limits: array<string, int|null>, features: array<int, string>, api_rate_limit: int}> $configured */
+        /** @var array<string, array{name: string, price: int, period_days: int, limits: array<string, int|null>, features: array<int, string>, api_rate_limit: int}> $configured */
         $configured = Config::array('billing.plans');
 
         $plans = [];
@@ -88,12 +66,8 @@ final readonly class Plan
             $plans[$key] = new self(
                 key: $key,
                 name: $plan['name'],
-                // Variável de ambiente declarada e vazia chega como string
-                // vazia, não como null. Sem normalizar, o plano seria
-                // oferecido e só falharia na Stripe, com um erro que não diz
-                // nada a quem clicou.
-                priceId: ($plan['price_id'] ?? '') === '' ? null : $plan['price_id'],
                 price: $plan['price'],
+                periodDays: $plan['period_days'],
                 limits: $plan['limits'],
                 features: $plan['features'],
                 apiRateLimit: $plan['api_rate_limit'],
@@ -106,14 +80,14 @@ final readonly class Plan
     /**
      * Plans a team can actually subscribe to.
      *
-     * A plan with no Stripe price is not purchasable whatever the config says;
-     * offering it would send someone to a checkout that cannot exist.
+     * A plan you can subscribe to is one that costs something; the free plan
+     * is where a team already is without any purchase.
      *
      * @return array<string, self>
      */
     public static function purchasable(): array
     {
-        return array_filter(self::all(), fn (self $plan): bool => $plan->priceId !== null);
+        return array_filter(self::all(), fn (self $plan): bool => $plan->price > 0);
     }
 
     /**
@@ -134,6 +108,6 @@ final readonly class Plan
 
     public function isFree(): bool
     {
-        return $this->priceId === null;
+        return $this->price === 0;
     }
 }
