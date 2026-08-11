@@ -25,9 +25,9 @@ use Modules\Carteira\Models\WalletHold;
 class ReserveCredit
 {
     /**
-     * Quanto tempo um hold sobrevive sem ser confirmado ou solto, antes do
-     * expurgo recolhê-lo. Curto porque a execução é síncrona; o hold só dura
-     * mais que isso se o processo morreu no meio.
+     * How long a hold survives without being confirmed or released, before
+     * the sweep collects it. Short because execution is synchronous; the
+     * hold only lasts longer than this if the process died midway.
      */
     public const int HOLD_TTL_MINUTES = 15;
 
@@ -39,9 +39,9 @@ class ReserveCredit
             $wallet = Wallet::forTeam($team);
             // Trava a linha antes de ler o disponível: o lock segura qualquer
             // outra reserva do mesmo time até esta transação commitar.
-            Wallet::query()->whereKey($wallet->id)->lockForUpdate()->first();
+            $locked = Wallet::query()->whereKey($wallet->id)->lockForUpdate()->firstOrFail();
 
-            $available = $wallet->fresh()->available();
+            $available = $locked->available();
 
             if ($available < $amountCents) {
                 throw InsufficientBalanceException::because($available, $amountCents);

@@ -32,7 +32,7 @@ class ConfirmHold
             $locked = WalletHold::query()->whereKey($hold->getKey())->lockForUpdate()->firstOrFail();
 
             if ($locked->status !== WalletHoldStatus::Active) {
-                throw HoldNotActiveException::forId($locked->getKey());
+                throw HoldNotActiveException::forId($locked->id);
             }
 
             $wallet = Wallet::query()->whereKey($locked->wallet_id)->lockForUpdate()->firstOrFail();

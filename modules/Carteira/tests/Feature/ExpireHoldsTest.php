@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 use App\Models\Team;
 use App\Support\TenantManager;
+use Illuminate\Support\Facades\Artisan;
 use Modules\Carteira\Enums\WalletHoldStatus;
 use Modules\Carteira\Models\Wallet;
 use Modules\Carteira\Models\WalletHold;
 
+// Usa a facade Artisan em vez de $this->artisan(): dentro de closures it()/test()
+// do Pest, $this é tipado pelo stub do próprio Pest como TestCall, cujo @mixin
+// aponta para PHPUnit\Framework\TestCase — sem o artisan() que só existe na
+// InteractsWithConsole do TestCase do Laravel. A facade evita a ambiguidade.
 it('solta holds ativos vencidos e mantém os recentes', function (): void {
     $team = Team::factory()->create();
     resolve(TenantManager::class)->set($team);
@@ -16,7 +21,7 @@ it('solta holds ativos vencidos e mantém os recentes', function (): void {
     $expired = WalletHold::factory()->expired()->create(['team_id' => $team->id, 'wallet_id' => $wallet->id]);
     $fresh = WalletHold::factory()->create(['team_id' => $team->id, 'wallet_id' => $wallet->id]);
 
-    $this->artisan('wallet:expire-holds')->assertExitCode(0);
+    expect(Artisan::call('wallet:expire-holds'))->toBe(0);
 
     expect($expired->fresh()->status)->toBe(WalletHoldStatus::Released)
         ->and($expired->fresh()->released_at)->not->toBeNull()
@@ -32,7 +37,7 @@ it('não toca em hold já liquidado mesmo vencido', function (): void {
         'team_id' => $team->id, 'wallet_id' => $wallet->id, 'status' => WalletHoldStatus::Settled,
     ]);
 
-    $this->artisan('wallet:expire-holds')->assertExitCode(0);
+    expect(Artisan::call('wallet:expire-holds'))->toBe(0);
 
     expect($settled->fresh()->status)->toBe(WalletHoldStatus::Settled);
 });

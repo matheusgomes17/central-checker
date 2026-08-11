@@ -32,7 +32,7 @@ class ReleaseHold
                 }
 
                 if ($locked->status !== WalletHoldStatus::Active) {
-                    throw HoldNotActiveException::forId($locked->getKey());
+                    throw HoldNotActiveException::forId($locked->id);
                 }
 
                 $locked->forceFill(['status' => WalletHoldStatus::Released, 'released_at' => now()])->save();

@@ -24,6 +24,9 @@ return new class extends Migration
             // O expurgo varre holds ativos vencidos; o disponível soma holds ativos.
             $table->index(['status', 'expires_at']);
             $table->index('wallet_id');
+            // Índice liderado por team_id: sem ele o tenant:audit acusa a tabela
+            // (foreignId()->constrained() não cria índice sozinho no SQLite).
+            $table->index('team_id');
         });
     }
 

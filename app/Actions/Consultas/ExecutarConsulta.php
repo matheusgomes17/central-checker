@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Consultas;
 
 use App\Exceptions\TenantIsMissingException;
+use App\Models\Team;
 use App\Models\User;
 use App\Support\TenantManager;
 use Modules\Carteira\Actions\ConfirmHold;
@@ -51,7 +52,7 @@ class ExecutarConsulta
 
         $team = $this->tenants->current();
 
-        if ($team === null) {
+        if (! $team instanceof Team) {
             throw TenantIsMissingException::forModel(ConsultaExecution::class);
         }
 
@@ -89,7 +90,7 @@ class ExecutarConsulta
 
     private function settle(?WalletHold $hold, bool $success, Consulta $consulta, ConsultaExecution $execution): void
     {
-        if ($hold === null) {
+        if (! $hold instanceof WalletHold) {
             return;
         }
 
@@ -104,7 +105,7 @@ class ExecutarConsulta
 
     private function release(?WalletHold $hold): void
     {
-        if ($hold !== null) {
+        if ($hold instanceof WalletHold) {
             $this->releaseHold->handle($hold);
         }
     }

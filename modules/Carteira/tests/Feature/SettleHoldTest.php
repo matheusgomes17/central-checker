@@ -51,7 +51,7 @@ it('soltar um hold já solto é no-op', function (): void {
     $release = resolve(ReleaseHold::class);
 
     $release->handle($hold);
-    $release->handle($hold->fresh());
+    $release->handle($hold->refresh());
 
     expect($hold->fresh()->status)->toBe(WalletHoldStatus::Released);
 });
@@ -61,7 +61,7 @@ it('não confirma um hold já solto', function (): void {
     $hold = resolve(ReserveCredit::class)->handle($team, 350);
     resolve(ReleaseHold::class)->handle($hold);
 
-    resolve(ConfirmHold::class)->handle($hold->fresh(), 'Tarde demais');
+    resolve(ConfirmHold::class)->handle($hold->refresh(), 'Tarde demais');
 })->throws(HoldNotActiveException::class);
 
 it('não solta um hold já confirmado', function (): void {
@@ -69,5 +69,5 @@ it('não solta um hold já confirmado', function (): void {
     $hold = resolve(ReserveCredit::class)->handle($team, 350);
     resolve(ConfirmHold::class)->handle($hold, 'Consulta X');
 
-    resolve(ReleaseHold::class)->handle($hold->fresh());
+    resolve(ReleaseHold::class)->handle($hold->refresh());
 })->throws(HoldNotActiveException::class);
