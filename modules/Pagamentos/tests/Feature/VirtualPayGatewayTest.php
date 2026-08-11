@@ -26,7 +26,10 @@ it('cria a cobrança Pix e mapeia a resposta', function (): void {
         && $request['payment_method'] === 'pix'
         && $request['amount'] === '10.00'          // centavos -> reais decimais
         && $request['reference'] === 'RECHARGE-1-123'
-        && $request->hasHeader('x-client-secret', 'csecret'));
+        && $request->hasHeader('x-client-secret', 'csecret')
+        // PayerData::for() sem document/phone não deve inventar as chaves no corpo.
+        && ! array_key_exists('document', $request->data())
+        && ! array_key_exists('phone', $request->data()));
 });
 
 it('lança em erro do gateway', function (): void {

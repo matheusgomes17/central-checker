@@ -49,8 +49,8 @@ require __DIR__.'/settings.php';
 | Todo routes/web.php roda sob o grupo web (CSRF incluído) independente de
 | onde a rota está declarada no arquivo — não existe "fora do grupo web"
 | dentro deste arquivo. O CSRF é excluído explicitamente em bootstrap/app.php
-| via $middleware->validateCsrfTokens(except: [...]), porque o webhook não
-| tem sessão nem cookie. Quem autentica é a assinatura do payload.
+| via PreventRequestForgery::except([...]), porque o webhook não tem sessão
+| nem cookie. Quem autentica é a assinatura do payload.
 |
 */
 
@@ -67,8 +67,9 @@ Route::get(Config::string('cashier.path').'/payment/{id}', [PaymentController::c
 |--------------------------------------------------------------------------
 |
 | Mesmo caso do webhook da Stripe acima: a rota continua dentro do grupo web,
-| e é a exceção em bootstrap/app.php (validateCsrfTokens) que tira o CSRF do
-| caminho. Sem sessão nem cookie, quem autentica é a assinatura do payload.
+| e é a exceção em bootstrap/app.php (PreventRequestForgery::except) que tira
+| o CSRF do caminho. Sem sessão nem cookie, quem autentica é a assinatura do
+| payload.
 |
 */
 

@@ -59,7 +59,19 @@ class VirtualPayWebhookController extends Controller
         }
 
         $intent = PaymentIntent::acrossTenants()
-            ->where(fn (\Illuminate\Contracts\Database\Query\Builder $query) => $query->where('external_id', $externalId)->orWhere('reference', $reference))
+            ->where(function (\Illuminate\Contracts\Database\Query\Builder $query) use ($externalId, $reference): void {
+                // Cada predicado só entra se o identificador existir — um
+                // where('external_id', null) vira whereNull() e, combinado
+                // com o OR, casaria com qualquer intent pendente sem
+                // external_id ainda (ver guard acima e o teste que prova).
+                if (filled($externalId)) {
+                    $query->orWhere('external_id', $externalId);
+                }
+
+                if (filled($reference)) {
+                    $query->orWhere('reference', $reference);
+                }
+            })
             ->first();
 
         if (! $intent instanceof PaymentIntent) {

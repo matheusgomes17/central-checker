@@ -183,6 +183,35 @@ class VirtualPayWebhookTest extends TestCase
         $this->assertSame(0, Wallet::forTeam($team)->balance_cents);
     }
 
+    public function test_a_reference_only_event_does_not_match_an_unrelated_pending_intent_without_external_id(): void
+    {
+        $teamA = Team::factory()->create();
+        // O órfão: pendente, sem external_id ainda (gateway não respondeu).
+        // É exatamente o intent que where('external_id', null) casaria por
+        // engano se virasse whereNull() dentro do OR.
+        $orphan = PaymentIntent::factory()->for($teamA)->create(['amount_cents' => 5000]);
+
+        $teamB = Team::factory()->create();
+
+        $response = $this->postSignedWebhook([
+            'event' => 'deposit.paid',
+            'data' => [
+                'status' => 'paid',
+                'reference' => 'RECHARGE-DOES-NOT-EXIST',
+            ],
+        ]);
+
+        $response->assertOk();
+
+        resolve(TenantManager::class)->set($teamA);
+
+        $this->assertSame(PaymentStatus::Pending, $orphan->fresh()->status);
+        $this->assertSame(0, Wallet::forTeam($teamA)->balance_cents);
+
+        resolve(TenantManager::class)->set($teamB);
+        $this->assertSame(0, Wallet::forTeam($teamB)->balance_cents);
+    }
+
     /**
      * Posts a signed VirtualPay webhook with the raw body sent verbatim — the
      * signature is computed over the exact bytes, so building it through
