@@ -65,6 +65,9 @@ class TenantManager
         // ele quem define qual será. Escopá-lo pelo tenant atual seria pedir
         // que ele já soubesse a resposta que veio buscar.
         ApiToken::class,
+        // Catálogo global: o operador define as consultas e todos os times veem
+        // o mesmo conjunto. Não pertence a time nenhum, então não é escopado.
+        \Modules\Consultas\Models\Consulta::class,
     ];
 
     /**
