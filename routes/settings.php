@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\BillingController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
@@ -34,9 +33,6 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::livewire('settings/webhooks', 'pages::settings.webhooks')->name('webhooks.edit');
 
     Route::livewire('settings/billing', 'pages::settings.billing')->name('billing.edit');
-    Route::get('settings/billing/checkout/{plan}', [BillingController::class, 'checkout'])->name('billing.checkout');
-    Route::get('settings/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
-    Route::get('settings/billing/invoice/{invoice}', [BillingController::class, 'invoice'])->name('billing.invoice');
 
     Route::middleware(EnsureTeamMembership::class)->group(function (): void {
         Route::livewire('settings/teams/{team}', 'pages::teams.edit')->name('teams.edit');

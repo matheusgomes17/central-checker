@@ -1,8 +1,7 @@
 <?php
 
-use App\Actions\Billing\SwapPlan;
+use App\Actions\Billing\PurchasePlan;
 use App\Enums\TeamPermission;
-use App\Exceptions\PlanSwapException;
 use App\Support\Billing\Plan;
 use App\Support\Billing\TeamBilling;
 use App\Support\TenantManager;
@@ -12,9 +11,19 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Pagamentos\Enums\PaymentPurpose;
+use Modules\Pagamentos\Enums\PaymentStatus;
+use Modules\Pagamentos\Models\PaymentIntent;
+use Modules\Pagamentos\Support\PayerData;
 
 new #[Title('Billing')] class extends Component {
     public ?string $confirming = null;
+
+    public ?string $pixCopyPaste = null;
+
+    public ?string $pixQrCode = null;
+
+    public ?string $pixPlanName = null;
 
     public function mount(): void
     {
@@ -27,16 +36,19 @@ new #[Title('Billing')] class extends Component {
     }
 
     /**
-     * Start a plan change, asking first when the new plan is smaller than what
-     * the team is already using.
+     * Open a Pix charge for the plan, asking first when the plan is smaller
+     * than what the team is already using.
+     *
+     * The subscription only activates once the webhook confirms the payment
+     * landed — this only ever opens the charge.
      */
-    public function choose(string $key): void
+    public function subscribe(string $key): void
     {
         abort_unless($this->canManage, 403);
 
         $team = $this->team();
 
-        $plan = Plan::purchasable()[$key] ?? Plan::find($key);
+        $plan = $this->plans()[$key] ?? Plan::find($key);
 
         if ($this->wouldLeaveTeamOverTheCeiling($plan) && $this->confirming !== $key) {
             $this->confirming = $key;
@@ -46,18 +58,14 @@ new #[Title('Billing')] class extends Component {
 
         $this->confirming = null;
 
-        try {
-            resolve(SwapPlan::class)->handle($team, $plan);
-        } catch (PlanSwapException $e) {
-            // addError não teria onde renderizar: não há campo 'plan' no
-            // markup, nem propriedade de mesmo nome. O toast é o que já
-            // avisa sucesso duas linhas abaixo — a recusa usa o mesmo canal.
-            Flux::toast(variant: 'danger', text: $e->getMessage());
+        $user = Auth::user();
+        $intent = resolve(PurchasePlan::class)->handle($team, $plan, PayerData::for($user->name, $user->email));
 
-            return;
-        }
+        $this->pixCopyPaste = $intent->copy_paste;
+        $this->pixQrCode = $intent->qr_code;
+        $this->pixPlanName = $plan->name;
 
-        Flux::toast(variant: 'success', text: __('Plan changed to :plan.', ['plan' => $plan->name]));
+        Flux::toast(variant: 'success', text: __('Scan the Pix code to activate :plan.', ['plan' => $plan->name]));
     }
 
     #[Computed]
@@ -97,23 +105,16 @@ new #[Title('Billing')] class extends Component {
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, \Laravel\Cashier\Invoice>
+     * @return \Illuminate\Support\Collection<int, PaymentIntent>
      */
     #[Computed]
-    public function invoices(): Collection
+    public function payments(): Collection
     {
-        $team = $this->team();
-
-        // Leitura ao vivo: a Stripe é a fonte de verdade de fatura, e guardar
-        // cópia local só cria uma tabela para divergir dela. A seção falha
-        // sozinha se a Stripe estiver fora — a tela continua de pé.
-        try {
-            return $team->invoices();
-        } catch (\Throwable $e) {
-            report($e);
-
-            return collect();
-        }
+        return PaymentIntent::acrossTenants()
+            ->where('team_id', $this->team()->id)
+            ->where('purpose', PaymentPurpose::Plan->value)
+            ->latest()
+            ->get();
     }
 
     private function team(): ?App\Models\Team
@@ -141,29 +142,21 @@ new #[Title('Billing')] class extends Component {
 
     <flux:heading class="sr-only">{{ __('Billing') }}</flux:heading>
 
-    <x-pages::settings.layout :heading="__('Billing')" :subheading="__('Plan, usage and invoices for this team')">
+    <x-pages::settings.layout :heading="__('Billing')" :subheading="__('Plan, usage and payments for this team')">
         <div class="my-6 space-y-8">
             <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                <div class="flex items-center justify-between gap-4">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-2">
-                            <flux:heading>{{ $this->billing->plan()->name }}</flux:heading>
-                            <flux:badge size="sm" :color="$this->billing->status()->color()">
-                                {{ $this->billing->status()->label() }}
-                            </flux:badge>
-                        </div>
-
-                        @if ($this->billing->onTrial())
-                            <flux:text class="text-sm">
-                                {{ __('Trial ends :when', ['when' => $this->billing->trialEndsAt()?->diffForHumans()]) }}
-                            </flux:text>
-                        @endif
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <flux:heading>{{ $this->billing->plan()->name }}</flux:heading>
+                        <flux:badge size="sm" :color="$this->billing->status()->color()">
+                            {{ $this->billing->status()->label() }}
+                        </flux:badge>
                     </div>
 
-                    @if ($this->canManage)
-                        <flux:button :href="route('billing.portal')" variant="outline" data-test="billing-portal">
-                            {{ __('Manage payment') }}
-                        </flux:button>
+                    @if ($this->billing->onTrial())
+                        <flux:text class="text-sm">
+                            {{ __('Trial ends :when', ['when' => $this->billing->trialEndsAt()?->diffForHumans()]) }}
+                        </flux:text>
                     @endif
                 </div>
 
@@ -208,30 +201,24 @@ new #[Title('Billing')] class extends Component {
             </div>
 
             <div class="space-y-3">
-                <flux:heading size="sm">{{ __('Invoices') }}</flux:heading>
+                <flux:heading size="sm">{{ __('Payments') }}</flux:heading>
 
                 <div class="rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">
-                    @forelse ($this->invoices as $invoice)
+                    @forelse ($this->payments as $payment)
                         <div class="flex items-center justify-between gap-4 p-4 {{ ! $loop->last ? 'border-b border-zinc-200 dark:border-zinc-700' : '' }}">
                             <div class="space-y-1">
-                                <flux:text class="font-medium">{{ $invoice->date()->format('d/m/Y') }}</flux:text>
+                                <flux:text class="font-medium">{{ $payment->created_at->format('d/m/Y') }}</flux:text>
                                 <div class="flex items-center gap-2">
-                                    <flux:badge size="sm" :color="$invoice->isPaid() ? 'green' : 'zinc'">
-                                        {{ $invoice->isPaid() ? __('Paid') : __('Pending') }}
+                                    <flux:badge size="sm" :color="$payment->status === PaymentStatus::Paid ? 'green' : 'zinc'">
+                                        {{ $payment->status === PaymentStatus::Paid ? __('Paid') : __('Pending') }}
                                     </flux:badge>
-                                    <flux:text class="text-sm">{{ $invoice->total() }}</flux:text>
+                                    <flux:text class="text-sm">{{ number_format($payment->amount_cents / 100, 2) }}</flux:text>
                                 </div>
                             </div>
-
-                            @if ($this->canManage)
-                                <flux:button :href="route('billing.invoice', ['invoice' => $invoice->id])" variant="outline" size="sm" :data-test="'billing-invoice-'.$invoice->id">
-                                    {{ __('Download') }}
-                                </flux:button>
-                            @endif
                         </div>
                     @empty
                         <div class="p-4">
-                            <flux:text class="text-zinc-600 dark:text-zinc-400">{{ __('No invoices yet') }}</flux:text>
+                            <flux:text class="text-zinc-600 dark:text-zinc-400">{{ __('No payments yet') }}</flux:text>
                         </div>
                     @endforelse
                 </div>
@@ -253,15 +240,9 @@ new #[Title('Billing')] class extends Component {
 
                                 @if ($this->billing->plan()->key === $key)
                                     <flux:badge size="sm" color="green">{{ __('Current plan') }}</flux:badge>
-                                @elseif ($this->billing->subscribed())
-                                    <flux:button wire:click="choose('{{ $key }}')" variant="primary" size="sm" class="w-full" :data-test="'billing-choose-'.$key">
-                                        {{ __('Choose :plan', ['plan' => $plan->name]) }}
-                                    </flux:button>
                                 @else
-                                    {{-- Sem assinatura o caminho é o checkout hospedado da Stripe, e ali o GET
-                                         só inicia o fluxo: nada muda deste lado. --}}
-                                    <flux:button :href="route('billing.checkout', ['plan' => $key])" variant="primary" size="sm" class="w-full" :data-test="'billing-choose-'.$key">
-                                        {{ __('Choose :plan', ['plan' => $plan->name]) }}
+                                    <flux:button wire:click="subscribe('{{ $key }}')" variant="primary" size="sm" class="w-full" :data-test="'billing-choose-'.$key">
+                                        {{ $this->billing->subscribed() ? __('Renew :plan', ['plan' => $plan->name]) : __('Subscribe to :plan', ['plan' => $plan->name]) }}
                                     </flux:button>
                                 @endif
                             </div>
@@ -278,9 +259,26 @@ new #[Title('Billing')] class extends Component {
                                 ]) }}
                             </flux:callout.text>
                             <x-slot name="actions">
-                                <flux:button wire:click="choose('{{ $this->confirming }}')" variant="danger" size="sm" data-test="downgrade-confirm-button">{{ __('Change anyway') }}</flux:button>
+                                <flux:button wire:click="subscribe('{{ $this->confirming }}')" variant="danger" size="sm" data-test="downgrade-confirm-button">{{ __('Change anyway') }}</flux:button>
                                 <flux:button wire:click="$set('confirming', null)" variant="ghost" size="sm">{{ __('Cancel') }}</flux:button>
                             </x-slot>
+                        </flux:callout>
+                    @endif
+
+                    @if ($pixCopyPaste !== null)
+                        <flux:callout icon="qr-code" data-test="pix-charge">
+                            <flux:callout.heading>{{ __('Pay with Pix to activate :plan', ['plan' => $pixPlanName]) }}</flux:callout.heading>
+                            <flux:callout.text>
+                                <div class="space-y-3">
+                                    @if ($pixQrCode !== null)
+                                        <img src="data:image/png;base64,{{ $pixQrCode }}" alt="{{ __('Pix QR code') }}" class="h-48 w-48" data-test="pix-qr-code">
+                                    @endif
+
+                                    <div class="rounded-lg bg-zinc-100 p-3 font-mono text-xs break-all dark:bg-zinc-800" data-test="pix-copy-paste">
+                                        {{ $pixCopyPaste }}
+                                    </div>
+                                </div>
+                            </flux:callout.text>
                         </flux:callout>
                     @endif
                 </div>
