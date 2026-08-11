@@ -39,7 +39,7 @@ class PurchasePlan
         }
 
         return $this->tenants->forTenant($team, function () use ($team, $plan, $payer): PaymentIntent {
-            $reference = 'PLAN-'.$plan->key.'-'.$team->getKey().'-'.Str::uuid()->toString();
+            $reference = 'PLAN-'.$plan->key.'-'.$team->id.'-'.Str::uuid()->toString();
 
             $intent = PaymentIntent::query()->create([
                 'reference' => $reference,

@@ -55,7 +55,7 @@ class PurchasePlanTest extends TestCase
         $this->assertSame('uuid-1', $intent->external_id);
         $this->assertSame('000201', $intent->copy_paste);
         $this->assertSame('b64', $intent->qr_code);
-        $this->assertStringStartsWith('PLAN-pro-'.$team->getKey().'-', $intent->reference);
+        $this->assertStringStartsWith('PLAN-pro-'.$team->id.'-', $intent->reference);
 
         $this->assertSame(0, PlanSubscription::query()->count());
     }
