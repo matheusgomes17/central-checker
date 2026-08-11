@@ -288,6 +288,14 @@ Resultado de consulta contém dado de terceiro. Tratamento com peso:
   duração. O payload sensível é separado, cifrado e expira.
 - O `team_id` acompanha tudo (o escopo fail-closed já garante), e o `request_id`
   entra no contexto de observabilidade que o projeto já publica.
+- **Quando o primeiro provider HTTP real entrar** (fase posterior à A): o
+  `failure_reason` da execução guarda o texto cru da exceção do provider, numa
+  coluna não cifrada. Mensagem de erro de terceiro pode carregar a entrada crua
+  (um CPF na URL da requisição, por exemplo) para dentro desse campo — o mesmo
+  vazamento que esta seção evita. O ponto de mascarar/filtrar é a fronteira em
+  `ResilientProvider::attempt()`, onde a exceção vira `ProviderResult::failed()`.
+  Em Fase A os providers são falsos e nada de PII flui por ali; a guarda entra
+  junto com o provider real.
 
 ## Ordem de construção
 
