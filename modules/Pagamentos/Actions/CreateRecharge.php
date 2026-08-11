@@ -40,7 +40,7 @@ class CreateRecharge
         }
 
         return $this->tenants->forTenant($team, function () use ($team, $amountCents, $payer, $expiration): PaymentIntent {
-            $reference = 'RECHARGE-'.$team->getKey().'-'.Str::uuid()->toString();
+            $reference = 'RECHARGE-'.$team->id.'-'.Str::uuid()->toString();
 
             $intent = PaymentIntent::query()->create([
                 'reference' => $reference,
@@ -59,7 +59,7 @@ class CreateRecharge
                 'qr_code' => $charge->qrCode(),
             ]);
 
-            return $intent->fresh();
+            return $intent->refresh();
         });
     }
 }

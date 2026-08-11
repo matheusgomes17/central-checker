@@ -14,9 +14,10 @@ use Modules\Pagamentos\Models\PaymentIntent;
 use Modules\Pagamentos\Support\PayerData;
 
 beforeEach(function (): void {
-    // O bind real fica a cargo da Task 8; aqui é preciso amarrar manualmente
-    // para a action conseguir resolver o contrato.
-    app()->bind(PaymentGateway::class, fn () => new VirtualPayGateway('https://api.virtualpay.online/v2', 'cid', 'csecret'));
+    // O binding real (Task 8) resolve com credenciais de config (string vazia
+    // em teste); este teste não exercita as credenciais, só precisa de uma
+    // instância concreta para a action resolver via Http::fake().
+    app()->bind(PaymentGateway::class, fn (): VirtualPayGateway => new VirtualPayGateway('https://api.virtualpay.online/v2', 'cid', 'csecret'));
 });
 
 it('cria a recarga com um valor válido: intent pendente com dados do gateway', function (): void {

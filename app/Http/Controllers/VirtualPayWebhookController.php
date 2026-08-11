@@ -59,7 +59,7 @@ class VirtualPayWebhookController extends Controller
         }
 
         $intent = PaymentIntent::acrossTenants()
-            ->where(fn ($query) => $query->where('external_id', $externalId)->orWhere('reference', $reference))
+            ->where(fn (\Illuminate\Contracts\Database\Query\Builder $query) => $query->where('external_id', $externalId)->orWhere('reference', $reference))
             ->first();
 
         if (! $intent instanceof PaymentIntent) {

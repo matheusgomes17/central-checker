@@ -8,7 +8,7 @@ namespace Modules\Pagamentos\Enums;
  * What a PaymentIntent is paying for.
  *
  * Only wallet recharge exists today; plan purchase joins this enum in a
- * later phase (Fase D).
+ * later phase (Phase D).
  */
 enum PaymentPurpose: string
 {

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Modules\Pagamentos\Exceptions\PaymentGatewayException;
 use Modules\Pagamentos\Gateways\VirtualPayGateway;
@@ -21,13 +22,11 @@ it('cria a cobrança Pix e mapeia a resposta', function (): void {
 
     expect($charge->externalId())->toBe('uuid-1')->and($charge->copyPaste())->toBe('000201...');
 
-    Http::assertSent(function ($request) {
-        return $request['type'] === 'deposit'
-            && $request['payment_method'] === 'pix'
-            && $request['amount'] === '10.00'          // centavos -> reais decimais
-            && $request['reference'] === 'RECHARGE-1-123'
-            && $request->hasHeader('x-client-secret', 'csecret');
-    });
+    Http::assertSent(fn (Request $request): bool => $request['type'] === 'deposit'
+        && $request['payment_method'] === 'pix'
+        && $request['amount'] === '10.00'          // centavos -> reais decimais
+        && $request['reference'] === 'RECHARGE-1-123'
+        && $request->hasHeader('x-client-secret', 'csecret'));
 });
 
 it('lança em erro do gateway', function (): void {

@@ -13,12 +13,12 @@ use Modules\Pagamentos\Support\PayerData;
 /**
  * HTTP driver for VirtualPay: creates a Pix charge via POST /transactions.
  */
-final class VirtualPayGateway implements PaymentGateway
+final readonly class VirtualPayGateway implements PaymentGateway
 {
     public function __construct(
-        private readonly string $baseUrl,
-        private readonly string $clientId,
-        private readonly string $clientSecret,
+        private string $baseUrl,
+        private string $clientId,
+        private string $clientSecret,
     ) {}
 
     public function createPixCharge(int $amountCents, string $reference, PayerData $payer): GatewayCharge
@@ -47,15 +47,27 @@ final class VirtualPayGateway implements PaymentGateway
         ])->acceptJson()->post("{$this->baseUrl}/transactions", $body);
 
         if ($response->failed()) {
-            $json = $response->json();
+            $message = $response->json('message');
+            $error = $response->json('error');
 
-            $message = $json['message'] ?? $json['error'] ?? 'erro desconhecido';
+            $reason = match (true) {
+                is_string($message) => $message,
+                is_string($error) => $error,
+                default => 'erro desconhecido',
+            };
 
-            throw PaymentGatewayException::from($response->status(), (string) $message);
+            throw PaymentGatewayException::from($response->status(), $reason);
         }
 
-        $json = $response->json();
+        $id = $response->json('id');
+        $copyPaste = $response->json('copy_paste');
+        $qrCode = $response->json('qr_code');
+        $status = $response->json('status', 'pending');
 
-        return GatewayCharge::from($json['id'], $json['copy_paste'], $json['qr_code'] ?? null, $json['status'] ?? 'pending');
+        if (! is_string($id) || ! is_string($copyPaste) || ! is_string($status) || ($qrCode !== null && ! is_string($qrCode))) {
+            throw PaymentGatewayException::from($response->status(), 'resposta do gateway em formato inesperado');
+        }
+
+        return GatewayCharge::from($id, $copyPaste, $qrCode, $status);
     }
 }
