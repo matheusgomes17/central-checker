@@ -51,9 +51,9 @@ return [
 
     'virtualpay' => [
         'base_url' => env('VIRTUALPAY_API_URL', 'https://api.virtualpay.online/v2'),
-        'client_id' => env('VIRTUALPAY_CLIENT_ID'),
-        'client_secret' => env('VIRTUALPAY_CLIENT_SECRET'),
-        'webhook_secret' => env('VIRTUALPAY_WEBHOOK_SECRET'),
+        'client_id' => (string) env('VIRTUALPAY_CLIENT_ID', ''),
+        'client_secret' => (string) env('VIRTUALPAY_CLIENT_SECRET', ''),
+        'webhook_secret' => (string) env('VIRTUALPAY_WEBHOOK_SECRET', ''),
     ],
 
 ];
