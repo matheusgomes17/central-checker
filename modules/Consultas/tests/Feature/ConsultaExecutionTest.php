@@ -9,7 +9,7 @@ use Modules\Consultas\Models\ConsultaExecution;
 
 it('grava o resultado cifrado em repouso', function (): void {
     $team = Team::factory()->create();
-    app(TenantManager::class)->set($team);
+    resolve(TenantManager::class)->set($team);
 
     $execution = ConsultaExecution::factory()->create([
         'team_id' => $team->id,
@@ -25,7 +25,7 @@ it('grava o resultado cifrado em repouso', function (): void {
 });
 
 it('é escopado por time — um time não vê a execução do outro', function (): void {
-    $tenants = app(TenantManager::class);
+    $tenants = resolve(TenantManager::class);
 
     $teamA = Team::factory()->create();
     $teamB = Team::factory()->create();

@@ -20,7 +20,7 @@ function input(): ConsultaInput
 
 it('devolve sucesso sem repetir', function (): void {
     $inner = FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano']));
-    $resilient = new ResilientProvider($inner, new CircuitBreaker, sleep: noSleep());
+    $resilient = new ResilientProvider($inner, new CircuitBreaker, backoff: noSleep());
 
     expect($resilient->execute(input())->isSuccess())->toBeTrue()
         ->and($inner->calls())->toBe(1);
@@ -28,7 +28,7 @@ it('devolve sucesso sem repetir', function (): void {
 
 it('não repete quando o desfecho é nada encontrado', function (): void {
     $inner = FakeProvider::returning(ProviderResult::noData());
-    $resilient = new ResilientProvider($inner, new CircuitBreaker, sleep: noSleep());
+    $resilient = new ResilientProvider($inner, new CircuitBreaker, backoff: noSleep());
 
     expect($resilient->execute(input())->isNoData())->toBeTrue()
         ->and($inner->calls())->toBe(1);
@@ -36,7 +36,7 @@ it('não repete quando o desfecho é nada encontrado', function (): void {
 
 it('repete em falha até o limite', function (): void {
     $inner = FakeProvider::returning(ProviderResult::failed('timeout'));
-    $resilient = new ResilientProvider($inner, new CircuitBreaker, maxTries: 2, sleep: noSleep());
+    $resilient = new ResilientProvider($inner, new CircuitBreaker, maxTries: 2, backoff: noSleep());
 
     expect($resilient->execute(input())->isFailed())->toBeTrue()
         ->and($inner->calls())->toBe(2);
@@ -47,7 +47,7 @@ it('para de repetir assim que um sucesso aparece', function (): void {
         ProviderResult::failed('timeout'),
         ProviderResult::success(['nome' => 'Fulano']),
     );
-    $resilient = new ResilientProvider($inner, new CircuitBreaker, maxTries: 3, sleep: noSleep());
+    $resilient = new ResilientProvider($inner, new CircuitBreaker, maxTries: 3, backoff: noSleep());
 
     expect($resilient->execute(input())->isSuccess())->toBeTrue()
         ->and($inner->calls())->toBe(2);
@@ -55,7 +55,7 @@ it('para de repetir assim que um sucesso aparece', function (): void {
 
 it('converte exceção do provider em falha', function (): void {
     $inner = FakeProvider::throwing(new RuntimeException('conexão recusada'));
-    $resilient = new ResilientProvider($inner, new CircuitBreaker, maxTries: 1, sleep: noSleep());
+    $resilient = new ResilientProvider($inner, new CircuitBreaker, maxTries: 1, backoff: noSleep());
 
     $result = $resilient->execute(input());
 
@@ -70,7 +70,7 @@ it('não chama o inner com o circuito aberto', function (): void {
     }
 
     $inner = FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano']));
-    $resilient = new ResilientProvider($inner, $breaker, sleep: noSleep());
+    $resilient = new ResilientProvider($inner, $breaker, backoff: noSleep());
 
     expect($resilient->execute(input())->isFailed())->toBeTrue()
         ->and($inner->calls())->toBe(0);
@@ -81,7 +81,7 @@ it('fecha o breaker ao voltar a ter sucesso', function (): void {
     $breaker->recordFailure('fake');
 
     $inner = FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano']));
-    $resilient = new ResilientProvider($inner, $breaker, sleep: noSleep());
+    $resilient = new ResilientProvider($inner, $breaker, backoff: noSleep());
 
     $resilient->execute(input());
 

@@ -6,9 +6,9 @@ use Modules\Consultas\Support\ConsultaAvailability;
 use Modules\Consultas\Support\ProviderRegistry;
 
 it('resolve o registro como singleton', function (): void {
-    expect(app(ProviderRegistry::class))->toBe(app(ProviderRegistry::class));
+    expect(resolve(ProviderRegistry::class))->toBe(resolve(ProviderRegistry::class));
 });
 
 it('resolve os serviços de suporte do módulo', function (): void {
-    expect(app(ConsultaAvailability::class))->toBeInstanceOf(ConsultaAvailability::class);
+    expect(resolve(ConsultaAvailability::class))->toBeInstanceOf(ConsultaAvailability::class);
 });
