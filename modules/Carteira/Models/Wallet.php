@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Carteira\Database\Factories\WalletFactory;
+use Modules\Carteira\Enums\WalletHoldStatus;
 
 /**
  * A team's balance, in cents.
@@ -53,5 +54,25 @@ class Wallet extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(WalletTransaction::class);
+    }
+
+    /**
+     * @return HasMany<WalletHold, $this>
+     */
+    public function holds(): HasMany
+    {
+        return $this->hasMany(WalletHold::class);
+    }
+
+    /**
+     * Balance minus everything currently reserved.
+     */
+    public function available(): int
+    {
+        $reserved = (int) $this->holds()
+            ->where('status', WalletHoldStatus::Active->value)
+            ->sum('amount_cents');
+
+        return $this->balance_cents - $reserved;
     }
 }
