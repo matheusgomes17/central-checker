@@ -40,10 +40,9 @@ require __DIR__.'/settings.php';
 | VirtualPay
 |--------------------------------------------------------------------------
 |
-| Mesmo caso do webhook da Stripe acima: a rota continua dentro do grupo web,
-| e é a exceção em bootstrap/app.php (PreventRequestForgery::except) que tira
-| o CSRF do caminho. Sem sessão nem cookie, quem autentica é a assinatura do
-| payload.
+| A rota continua dentro do grupo web, e é a exceção em bootstrap/app.php
+| (PreventRequestForgery::except) que tira o CSRF do caminho. Sem sessão nem
+| cookie, quem autentica é a assinatura do payload.
 |
 */
 

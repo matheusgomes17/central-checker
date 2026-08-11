@@ -10,6 +10,7 @@ use App\Support\Billing\Plan;
 use App\Support\TenantManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Modules\Carteira\Actions\CreditWallet;
 use Modules\Carteira\Enums\WalletTransactionType;
 use Modules\Pagamentos\Contracts\WebhookVerifier;
@@ -112,11 +113,38 @@ class VirtualPayWebhookController extends Controller
                         "Recarga Pix — {$locked->reference}",
                         $locked,
                     ),
-                    PaymentPurpose::Plan => $this->activatePlan->handle($team, Plan::find((string) $locked->plan)),
+                    PaymentPurpose::Plan => $this->activatePlanIfResolvable($team, $locked),
                 };
             });
         });
 
         return response('', 200);
+    }
+
+    /**
+     * Activates the plan the intent paid for, unless the plan key no longer
+     * resolves (removed or renamed after the charge was created).
+     *
+     * Deliberately does not throw: this runs inside the transaction that
+     * already marked the intent Paid, and Plan::find() throwing here would
+     * roll that update back too — reverting the intent to Pending, 500ing the
+     * webhook, and leaving the gateway retrying forever for a customer who
+     * already paid. Staying Paid without a subscription is a state a human
+     * can reconcile; an endless retry loop is not.
+     */
+    private function activatePlanIfResolvable(Team $team, PaymentIntent $intent): void
+    {
+        $plan = Plan::tryFind((string) $intent->plan);
+
+        if (! $plan instanceof Plan) {
+            Log::warning('Pix de plano pago com plano desconhecido; intent marcado Paid sem ativar.', [
+                'intent_id' => $intent->id,
+                'plan' => $intent->plan,
+            ]);
+
+            return;
+        }
+
+        $this->activatePlan->handle($team, $plan);
     }
 }

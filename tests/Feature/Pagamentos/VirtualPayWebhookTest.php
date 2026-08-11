@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Pagamentos;
 
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Support\Billing\Plan;
 use App\Support\Billing\Subscriptions;
@@ -279,6 +280,32 @@ class VirtualPayWebhookTest extends TestCase
 
         $this->assertSame(PaymentStatus::Paid, $intent->fresh()->status);
         $this->assertEquals($originalEnd, resolve(Subscriptions::class)->active($team)?->current_period_end);
+    }
+
+    public function test_a_plan_payment_with_an_unknown_plan_key_is_marked_paid_without_activating_or_crashing(): void
+    {
+        $team = Team::factory()->create();
+        $intent = PaymentIntent::factory()->for($team)->withExternalId('tx_ghost_plan')->create([
+            'purpose' => PaymentPurpose::Plan,
+            'plan' => 'ghost',
+            'amount_cents' => 1000,
+        ]);
+
+        $response = $this->postSignedWebhook([
+            'event' => 'deposit.paid',
+            'data' => [
+                'status' => 'paid',
+                'transaction_id' => 'tx_ghost_plan',
+                'reference' => $intent->reference,
+            ],
+        ]);
+
+        $response->assertOk();
+
+        resolve(TenantManager::class)->set($team);
+
+        $this->assertSame(PaymentStatus::Paid, $intent->fresh()->status);
+        $this->assertSame(0, PlanSubscription::query()->count());
     }
 
     /**

@@ -40,9 +40,9 @@ class PlanFeatureException extends RuntimeException
      * The least expensive way to get the capability, if there is one.
      *
      * Cheapest rather than first, because the order of the plans in config is
-     * a layout decision and this is a price quote. Every plan is considered,
-     * including one with no Stripe price yet: a plan the catalog announces is
-     * an answer to "which plan has this", whatever the checkout can do today.
+     * a layout decision and this is a price quote. Every plan in the catalog
+     * is considered, including a free one: this is an answer to "which plan
+     * has this", not to which plans are currently purchasable.
      */
     private static function cheapestPlanWith(string $feature): ?Plan
     {

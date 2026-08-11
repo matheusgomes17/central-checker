@@ -164,7 +164,7 @@ new #[Title('Billing')] class extends Component {
                     {{-- O aviso fica na própria página, não só no e-mail: quem
                          chega aqui já está procurando o que fazer. --}}
                     <flux:callout class="mt-4" variant="warning" data-test="billing-attention">
-                        {{ __('This subscription needs attention. Update the payment method to keep access.') }}
+                        {{ __('This subscription is expiring. Renew via Pix to keep your plan.') }}
                     </flux:callout>
                 @endif
             </div>
