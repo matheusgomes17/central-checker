@@ -31,6 +31,7 @@ class ConsultaFactory extends Factory
             'description' => $this->faker->sentence(),
             'category' => 'cadastral',
             'provider_key' => 'fake',
+            'price_cents' => 0,
             'status' => ConsultaStatus::Active,
             'timeout_seconds' => 30,
         ];
@@ -39,5 +40,10 @@ class ConsultaFactory extends Factory
     public function inMaintenance(): self
     {
         return $this->state(['status' => ConsultaStatus::Maintenance]);
+    }
+
+    public function priced(int $cents): self
+    {
+        return $this->state(['price_cents' => $cents]);
     }
 }

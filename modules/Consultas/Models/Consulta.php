@@ -24,10 +24,11 @@ use Override;
  * @property string|null $description
  * @property string|null $category
  * @property string $provider_key
+ * @property int $price_cents
  * @property ConsultaStatus $status
  * @property int $timeout_seconds
  */
-#[Fillable(['slug', 'name', 'description', 'category', 'provider_key', 'status', 'timeout_seconds'])]
+#[Fillable(['slug', 'name', 'description', 'category', 'provider_key', 'price_cents', 'status', 'timeout_seconds'])]
 class Consulta extends Model
 {
     /** @use HasFactory<ConsultaFactory> */
