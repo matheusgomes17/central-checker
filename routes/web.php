@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\VirtualPayWebhookController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
@@ -57,3 +58,15 @@ Route::post(Config::string('cashier.path').'/webhook', [StripeWebhookController:
 Route::get(Config::string('cashier.path').'/payment/{id}', [PaymentController::class, 'show'])
     ->middleware(['web', 'auth'])
     ->name('cashier.payment');
+
+/*
+|--------------------------------------------------------------------------
+| VirtualPay
+|--------------------------------------------------------------------------
+|
+| Mesmo motivo do webhook da Stripe acima: fora do grupo web porque não tem
+| sessão nem cookie, e quem autentica é a assinatura do payload, não o CSRF.
+|
+*/
+
+Route::post('webhooks/virtualpay', VirtualPayWebhookController::class)->name('webhooks.virtualpay');
