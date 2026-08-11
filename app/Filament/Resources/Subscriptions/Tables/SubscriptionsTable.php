@@ -23,7 +23,7 @@ class SubscriptionsTable
                 TextColumn::make('plan')
                     ->label(__('Plan'))
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => Plan::find($state)->name),
+                    ->formatStateUsing(fn (string $state): string => Plan::all()[$state]?->name ?? $state),
                 TextColumn::make('state')
                     ->label(__('State'))
                     ->badge()
@@ -48,7 +48,7 @@ class SubscriptionsTable
             ->filters([
                 SelectFilter::make('plan')
                     ->label(__('Plan'))
-                    ->options(fn (): array => collect(Plan::all())
+                    ->options(fn (): array => collect(Plan::purchasable())
                         ->mapWithKeys(fn (Plan $plan): array => [$plan->key => $plan->name])
                         ->all()),
             ]);

@@ -11,6 +11,7 @@ use App\Filament\Widgets\RevenueOverview;
 use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Billing\SubscriptionStatus;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -41,6 +42,20 @@ class BillingPanelTest extends TestCase
 
         $component->assertOk();
         $component->assertCanSeeTableRecords([$subscription]);
+    }
+
+    /**
+     * A row still inside its paid period but marked not to renew shows as
+     * `Expiring`, not `Active` — the panel needs to say "this one is about to
+     * lapse", not just "this one currently has access".
+     */
+    public function test_a_canceling_row_shows_the_expiring_state(): void
+    {
+        $subscription = PlanSubscription::factory()->canceling()->for(Team::factory())->create();
+
+        Livewire::test(ListSubscriptions::class)
+            ->assertOk()
+            ->assertSee(SubscriptionStatus::Expiring->label());
     }
 
     /**
