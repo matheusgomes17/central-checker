@@ -111,4 +111,14 @@ return [
 
     'stripe_integration' => (bool) env('STRIPE_INTEGRATION', false),
 
+    'recharge' => [
+        // Limites da recarga por Pix, em centavos. A VirtualPay fala reais na
+        // fronteira; aqui é centavos como o resto do dinheiro do sistema.
+        'min_cents' => (int) env('RECHARGE_MIN_CENTS', 1000),
+        'max_cents' => (int) env('RECHARGE_MAX_CENTS', 100000),
+        'expiration_seconds' => (int) env('RECHARGE_EXPIRATION_SECONDS', 3600),
+    ],
+
+    'virtualpay_integration' => (bool) env('VIRTUALPAY_INTEGRATION', false),
+
 ];
