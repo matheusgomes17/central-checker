@@ -1,0 +1,62 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Models\Team;
+use Illuminate\Support\Facades\Http;
+use Modules\Carteira\Models\WalletTransaction;
+use Modules\Pagamentos\Actions\CreateRecharge;
+use Modules\Pagamentos\Contracts\PaymentGateway;
+use Modules\Pagamentos\Enums\PaymentStatus;
+use Modules\Pagamentos\Exceptions\RechargeAmountException;
+use Modules\Pagamentos\Gateways\VirtualPayGateway;
+use Modules\Pagamentos\Models\PaymentIntent;
+use Modules\Pagamentos\Support\PayerData;
+
+beforeEach(function (): void {
+    // O bind real fica a cargo da Task 8; aqui é preciso amarrar manualmente
+    // para a action conseguir resolver o contrato.
+    app()->bind(PaymentGateway::class, fn () => new VirtualPayGateway('https://api.virtualpay.online/v2', 'cid', 'csecret'));
+});
+
+it('cria a recarga com um valor válido: intent pendente com dados do gateway', function (): void {
+    Http::fake(['*/transactions' => Http::response([
+        'id' => 'uuid-1', 'copy_paste' => '000201...', 'qr_code' => 'base64==', 'status' => 'pending',
+    ], 201)]);
+
+    $team = Team::factory()->create();
+
+    $intent = resolve(CreateRecharge::class)->handle($team, 5000, PayerData::for('Fulano', 'f@e.com'));
+
+    expect($intent->status)->toBe(PaymentStatus::Pending)
+        ->and($intent->amount_cents)->toBe(5000)
+        ->and($intent->external_id)->toBe('uuid-1')
+        ->and($intent->copy_paste)->toBe('000201...')
+        ->and($intent->reference)->toStartWith('RECHARGE-'.$team->id.'-');
+
+    expect(WalletTransaction::acrossTenants()->count())->toBe(0);
+});
+
+it('lança RechargeAmountException para valor abaixo do mínimo, sem chamar o gateway', function (): void {
+    Http::fake();
+
+    $team = Team::factory()->create();
+
+    expect(fn () => resolve(CreateRecharge::class)->handle($team, 500, PayerData::for('Fulano', 'f@e.com')))
+        ->toThrow(RechargeAmountException::class);
+
+    Http::assertNothingSent();
+    expect(PaymentIntent::acrossTenants()->count())->toBe(0);
+});
+
+it('lança RechargeAmountException para valor acima do máximo, sem chamar o gateway', function (): void {
+    Http::fake();
+
+    $team = Team::factory()->create();
+
+    expect(fn () => resolve(CreateRecharge::class)->handle($team, 200000, PayerData::for('Fulano', 'f@e.com')))
+        ->toThrow(RechargeAmountException::class);
+
+    Http::assertNothingSent();
+    expect(PaymentIntent::acrossTenants()->count())->toBe(0);
+});
