@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace Tests\Feature\Pagamentos;
 
 use App\Models\Team;
+use App\Support\Billing\Plan;
+use App\Support\Billing\Subscriptions;
 use App\Support\TenantManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Modules\Carteira\Models\Wallet;
+use Modules\Carteira\Models\WalletTransaction;
 use Modules\Pagamentos\Contracts\WebhookVerifier;
+use Modules\Pagamentos\Enums\PaymentPurpose;
 use Modules\Pagamentos\Enums\PaymentStatus;
 use Modules\Pagamentos\Models\PaymentIntent;
 use Modules\Pagamentos\Webhooks\VirtualPayWebhookVerifier;
@@ -210,6 +214,71 @@ class VirtualPayWebhookTest extends TestCase
 
         resolve(TenantManager::class)->set($teamB);
         $this->assertSame(0, Wallet::forTeam($teamB)->balance_cents);
+    }
+
+    public function test_a_plan_payment_activates_the_subscription_and_credits_no_wallet(): void
+    {
+        $team = Team::factory()->create();
+        $plan = Plan::find('pro');
+        $intent = PaymentIntent::factory()->for($team)->withExternalId('tx_plan')->create([
+            'purpose' => PaymentPurpose::Plan,
+            'plan' => 'pro',
+            'amount_cents' => $plan->price,
+        ]);
+
+        $response = $this->postSignedWebhook([
+            'event' => 'deposit.paid',
+            'data' => [
+                'status' => 'paid',
+                'transaction_id' => 'tx_plan',
+                'reference' => $intent->reference,
+            ],
+        ]);
+
+        $response->assertOk();
+
+        resolve(TenantManager::class)->set($team);
+
+        $this->assertSame(PaymentStatus::Paid, $intent->fresh()->status);
+
+        $subscription = resolve(Subscriptions::class)->active($team);
+        $this->assertSame('pro', $subscription?->plan);
+        $this->assertTrue($subscription->current_period_end->isFuture());
+
+        $this->assertSame(0, WalletTransaction::query()->count());
+    }
+
+    public function test_replaying_a_plan_payment_does_not_extend_the_subscription_again(): void
+    {
+        $team = Team::factory()->create();
+        $plan = Plan::find('pro');
+        $intent = PaymentIntent::factory()->for($team)->withExternalId('tx_plan_replay')->create([
+            'purpose' => PaymentPurpose::Plan,
+            'plan' => 'pro',
+            'amount_cents' => $plan->price,
+        ]);
+
+        $payload = [
+            'event' => 'deposit.paid',
+            'data' => [
+                'status' => 'paid',
+                'transaction_id' => 'tx_plan_replay',
+                'reference' => $intent->reference,
+            ],
+        ];
+
+        $this->postSignedWebhook($payload)->assertOk();
+
+        resolve(TenantManager::class)->set($team);
+        $originalEnd = resolve(Subscriptions::class)->active($team)?->current_period_end;
+
+        $second = $this->postSignedWebhook($payload);
+        $second->assertOk();
+
+        resolve(TenantManager::class)->set($team);
+
+        $this->assertSame(PaymentStatus::Paid, $intent->fresh()->status);
+        $this->assertEquals($originalEnd, resolve(Subscriptions::class)->active($team)?->current_period_end);
     }
 
     /**

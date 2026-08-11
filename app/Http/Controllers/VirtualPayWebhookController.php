@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Billing\ActivatePlan;
 use App\Models\Team;
+use App\Support\Billing\Plan;
 use App\Support\TenantManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Modules\Carteira\Actions\CreditWallet;
 use Modules\Carteira\Enums\WalletTransactionType;
 use Modules\Pagamentos\Contracts\WebhookVerifier;
+use Modules\Pagamentos\Enums\PaymentPurpose;
 use Modules\Pagamentos\Enums\PaymentStatus;
 use Modules\Pagamentos\Models\PaymentIntent;
 
@@ -29,6 +32,7 @@ class VirtualPayWebhookController extends Controller
         private readonly WebhookVerifier $verifier,
         private readonly TenantManager $tenants,
         private readonly CreditWallet $creditWallet,
+        private readonly ActivatePlan $activatePlan,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -100,13 +104,16 @@ class VirtualPayWebhookController extends Controller
 
                 $locked->update(['status' => PaymentStatus::Paid, 'paid_at' => now()]);
 
-                $this->creditWallet->handle(
-                    $team,
-                    $locked->amount_cents, // credita o que NÓS cobramos, não o valor do payload
-                    WalletTransactionType::Recharge,
-                    "Recarga Pix — {$locked->reference}",
-                    $locked,
-                );
+                match ($locked->purpose) {
+                    PaymentPurpose::Recharge => $this->creditWallet->handle(
+                        $team,
+                        $locked->amount_cents, // credita o que NÓS cobramos, não o valor do payload
+                        WalletTransactionType::Recharge,
+                        "Recarga Pix — {$locked->reference}",
+                        $locked,
+                    ),
+                    PaymentPurpose::Plan => $this->activatePlan->handle($team, Plan::find((string) $locked->plan)),
+                };
             });
         });
 
