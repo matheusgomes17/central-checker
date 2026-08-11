@@ -7,6 +7,7 @@ namespace App\Support;
 use App\Models\ApiToken;
 use App\Models\FailedJob;
 use App\Models\Membership;
+use App\Models\PlanSubscription;
 use App\Models\SocialAccount;
 use App\Models\Team;
 use App\Models\TeamInvitation;
@@ -68,6 +69,12 @@ class TenantManager
         // Catálogo global: o operador define as consultas e todos os times veem
         // o mesmo conjunto. Não pertence a time nenhum, então não é escopado.
         \Modules\Consultas\Models\Consulta::class,
+        // Assinatura pré-paga em substituição ao Cashier: pertence ao time, mas
+        // é resolvida pelo webhook de pagamento sem nenhum tenant no contexto —
+        // igual à antiga tabela `subscriptions` do Cashier, já listada abaixo em
+        // UNSCOPED_TABLES. Quem filtra o acesso é a relação team(), não o escopo
+        // global.
+        PlanSubscription::class,
     ];
 
     /**
