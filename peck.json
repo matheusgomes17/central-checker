@@ -3,10 +3,15 @@
     "ignore": {
         "words": [
             "activitylog",
+            "autoload",
             "balancer",
             "batchable",
             "boilerplate",
             "cancelling",
+            "consulta",
+            "consultas",
+            "cpf",
+            "executar",
             "flux",
             "ids",
             "infolist",
@@ -28,6 +33,7 @@
             "proration",
             "pulse",
             "reimplementing",
+            "reimplements",
             "sail",
             "sentry",
             "signups",
@@ -40,6 +46,7 @@
         ],
         "paths": [
             "bootstrap/cache",
+            "center",
             "docs",
             "PLANEJAMENTO.md",
             "public/build",
