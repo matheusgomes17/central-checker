@@ -6,6 +6,7 @@ namespace Modules\Pagamentos\Providers;
 
 use Illuminate\Support\Facades\Config;
 use Modules\Core\Providers\ModuleServiceProvider;
+use Modules\Pagamentos\Console\Commands\SetWebhookSecret;
 use Modules\Pagamentos\Contracts\PaymentGateway;
 use Modules\Pagamentos\Contracts\WebhookVerifier;
 use Modules\Pagamentos\Gateways\VirtualPayGateway;
@@ -31,5 +32,16 @@ class PagamentosServiceProvider extends ModuleServiceProvider
             Config::string('services.virtualpay.client_id'),
             Config::string('services.virtualpay.client_secret'),
         ));
+    }
+
+    // Comandos em modules/*/Console/Commands não são descobertos
+    // automaticamente (mesma situação de MakeModuleCommand em Core);
+    // precisam de registro explícito.
+    #[Override]
+    protected function bootModule(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([SetWebhookSecret::class]);
+        }
     }
 }
