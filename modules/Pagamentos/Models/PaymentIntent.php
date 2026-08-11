@@ -29,6 +29,7 @@ use Override;
  * @property PaymentStatus $status
  * @property string $method
  * @property PaymentPurpose $purpose
+ * @property string|null $plan
  * @property string|null $copy_paste
  * @property string|null $qr_code
  * @property \Illuminate\Support\Carbon|null $expires_at
@@ -41,6 +42,7 @@ use Override;
     'status',
     'method',
     'purpose',
+    'plan',
     'copy_paste',
     'qr_code',
     'expires_at',
