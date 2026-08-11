@@ -25,7 +25,17 @@ class SetWebhookSecret extends Command
     public function handle(): int
     {
         $path = app()->environmentFilePath();
-        $contents = file_get_contents($path);
+        $exists = file_exists($path);
+        $contents = $exists ? file_get_contents($path) : '';
+
+        // Um .env que existe mas não pôde ser lido não pode virar '': isso
+        // truncaria o arquivo para conter só a linha do webhook na escrita
+        // abaixo, apagando toda credencial já configurada.
+        if ($exists && $contents === false) {
+            $this->components->error('Não foi possível ler o .env em '.$path.'.');
+
+            return self::FAILURE;
+        }
 
         $new = EnvFile::withValue(
             $contents === false ? '' : $contents,
@@ -33,7 +43,11 @@ class SetWebhookSecret extends Command
             (string) $this->argument('secret'),
         );
 
-        file_put_contents($path, $new);
+        if (file_put_contents($path, $new) === false) {
+            $this->components->error('Não foi possível gravar o .env.');
+
+            return self::FAILURE;
+        }
 
         $this->call('config:clear');
 

@@ -30,3 +30,23 @@ it('grava o novo segredo no .env preservando as outras linhas', function (): voi
         rmdir($tmpDir);
     }
 });
+
+it('cria o .env quando ele ainda não existe', function (): void {
+    $tmpDir = sys_get_temp_dir().'/pagamentos-env-'.uniqid();
+    mkdir($tmpDir);
+
+    app()->useEnvironmentPath($tmpDir);
+
+    try {
+        expect(file_exists($tmpDir.'/.env'))->toBeFalse();
+
+        expect(Artisan::call('virtualpay:webhook-secret', ['secret' => 'novo-segredo']))->toBe(0);
+
+        $contents = (string) file_get_contents($tmpDir.'/.env');
+
+        expect($contents)->toContain('VIRTUALPAY_WEBHOOK_SECRET=novo-segredo');
+    } finally {
+        unlink($tmpDir.'/.env');
+        rmdir($tmpDir);
+    }
+});
