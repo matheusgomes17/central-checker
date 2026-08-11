@@ -29,8 +29,8 @@ reaproveitada.
 | Cobrança do plano | Por consulta: **franquia mensal** ou **ilimitado** | O admin escolhe caso a caso |
 | Integração | Consulta = **classe PHP** com contrato nosso | Controle, teste, versionamento, resiliência |
 | Cobrança na falha | **Só debita no resultado útil** | Timeout / fora do ar / "nada encontrado" não cobram |
-| Pagamento | Gateway **nacional** (virtualpay.online), Pix | Remove Stripe/Cashier |
-| Assinatura | **Pix Automático** como primeira opção de recorrência | Pix não é nativamente recorrente |
+| Pagamento | Gateway **nacional** (virtualpay.online), **Pix avulso** | Remove Stripe/Cashier |
+| Assinatura | **Ciclo pré-pago renovável** (sem recorrência no gateway) | A VirtualPay só faz Pix avulso — sem Pix Automático nem cobrança agendada |
 
 ## Vocabulário
 
@@ -182,31 +182,64 @@ exceção nomeada, com registro de quem concedeu — o mesmo espírito do
 ## D6 — Pagamentos nacionais, e o que sai do boilerplate
 
 Este é o maior desvio do que já está pronto. O boilerplate construiu billing com
-**Cashier/Stripe**. O produto usa **só VirtualPay**.
+**Cashier/Stripe**. O produto usa **só VirtualPay**, e a API dela — conferida na
+integração do legado — faz **uma coisa só**: cobrança Pix avulsa.
 
-- **Abstração `PaymentGateway`** (contrato) com **driver VirtualPay**. A regra de
-  arquitetura impede o driver de vazar para fora do módulo `Pagamentos` — o resto
-  da aplicação fala com o contrato.
-- **Recarga** = cobrança Pix avulsa. `PaymentIntent` guarda QR, copia-e-cola,
-  status, expiração. Webhook confirma → evento credita a carteira (`recharge`, com
-  bônus opcional configurável).
-- **Verificação de assinatura do webhook é obrigatória** e é o que autentica a
+**O que a VirtualPay oferece de fato** (`api.virtualpay.online/v2`):
+
+- Autenticação por headers `x-client-id` + `x-client-secret`.
+- `POST /transactions` com `type: deposit, payment_method: pix, amount, reference,
+  email, name, document, phone` → devolve `{ id, copy_paste, qr_code, status }`.
+- Webhook nos eventos `deposit.paid` / `transaction.updated` com `status: paid` e
+  header `X-Gateway-Signature`.
+- **Não há** assinatura recorrente, Pix Automático, cobrança agendada nem cartão
+  nesta integração. Todo pagamento é um Pix único que a pessoa paga na hora.
+
+Desenho:
+
+- **Abstração `PaymentGateway`** (contrato) com **driver VirtualPay**. Como o
+  gateway só faz uma operação, o contrato é enxuto: `criarCobrancaPix(valor,
+  referencia, cliente): CobrancaPix` e a verificação do webhook. A regra de
+  arquitetura impede o driver de vazar para fora do módulo `Pagamentos`.
+- **Recarga e compra de plano usam o mesmo mecanismo** — um Pix avulso — e se
+  distinguem pela `referencia` (`RECHARGE-<team>-<ts>` vs `PLAN-<slug>-<team>-<ts>`).
+  Uma integração, dois propósitos. `PaymentIntent` guarda QR, copia-e-cola, status,
+  expiração e o propósito.
+- **Verificação de `X-Gateway-Signature` é obrigatória** e é o que autentica a
   chamada — o endpoint não tem sessão. O legado não verificava nada e tinha um
   fallback que creditava a recarga pendente mais recente quando não achava a
   transação; isso é a porta de fraude nº 1 dele e **não** se repete aqui.
-  Idempotência por `external_id` para o gateway reentregar sem creditar duas vezes.
-- **Assinatura recorrente via Pix Automático** como primeira opção; o driver
-  abstrai a recorrência. A máquina de estados (ativa → vencida → carência →
-  suspensa → cancelada) é **reaproveitada** do conceito `TeamBilling` do
-  boilerplate, agora respaldada por um model `Subscription` nosso em vez do
-  Cashier. Suspensão nunca bloqueia a tela onde se paga.
+  Idempotência pelo `id` da transação para o gateway reentregar sem processar duas
+  vezes.
+- **Credenciais em `.env` / cifradas, nunca em código.** O legado deixa
+  `client-id` e `client-secret` embutidos num arquivo versionável — as do legado
+  precisam ser **rotacionadas** antes de qualquer uso, porque já vazaram.
+
+**Assinatura é um ciclo pré-pago renovável, gerido pela aplicação — não pelo
+gateway.** Sem cobrança recorrente, a assinatura é um período pago à frente:
+
+- Comprar plano = um Pix avulso pelo preço do plano → o webhook confirmado
+  **ativa** o plano por N dias (`current_period_end`). A franquia mensal zera a
+  cada ciclo pago.
+- **Perto do vencimento**: notificação + botão "renovar" que gera novo Pix. Nada é
+  cobrado automaticamente; a pessoa paga cada ciclo ativamente.
+- **Não pagou até o fim do período** (mais uma carência configurável): a assinatura
+  **expira** e o time cai no `default_plan` (gratuito). Sem `default_plan`, "sem
+  assinatura" viraria "sem limite".
+- A máquina de estados **simplifica** em relação ao boilerplate: `ativa →
+  (vencendo) → expirada`. **Não há dunning por retentativa** — não existe cobrança
+  automática para falhar e reagendar. O conceito de estado do `TeamBilling` é
+  reaproveitado; a origem passa a ser um model `Subscription` nosso.
+- Suspensão/expiração nunca bloqueia a tela onde se renova.
+
 - **Cashier/Stripe é removido** (`docs/poda.md` existe para isso), seguindo a
   aversão do projeto a duas fontes de verdade para cobrança. A migração de colunas
   do Cashier em `teams` sai junto.
 
-> A recorrência do Pix Automático precisa ser confirmada contra a API real da
-> VirtualPay antes da fase D. O contrato do gateway isola essa incerteza; o
-> primeiro teste de integração é opt-in, como o `StripeIntegrationTest` já é.
+> O primeiro teste de integração contra a VirtualPay é **opt-in** (variável de
+> ambiente), como o `StripeIntegrationTest` já era: suíte que chama gateway em
+> silêncio quebra quando a rede quebra. A verificação de assinatura do webhook, ao
+> contrário, roda offline — o algoritmo é conhecido e o segredo é nosso.
 
 ## D7 — Admin (Filament, em `/admin`)
 
@@ -270,7 +303,8 @@ plano de implementação próprio.
 - **C — Módulo `Pagamentos` (VirtualPay).** Abstração, recarga Pix, webhook
   assinado e idempotente, crédito na carteira por evento. **Remove Cashier/Stripe.**
 - **D — Planos e assinatura.** `plan_consultas`, franquia + contadores, gating,
-  assinatura via VirtualPay (Pix Automático), estados, overrides por usuário.
+  assinatura como ciclo pré-pago renovável (compra e renovação de plano via Pix
+  avulso), estados, overrides por usuário.
 - **E — Admin Filament.** Resources, relatórios, saúde de provider, gestão por
   usuário.
 - **F — Frontend.** Migração/redesign do layout, telas do usuário, LGPD na tela.
@@ -295,9 +329,10 @@ domínio pronto para ter o que mostrar.
 | Risco | Impacto | Mitigação |
 |---|---|---|
 | Reserva de saldo incorreta sob concorrência | **Crítico** | `FOR UPDATE` + hold; teste de corrida visto falhar; fase B orça mais teste que código |
-| Webhook de pagamento sem verificação | **Crítico** | Assinatura obrigatória + idempotência; é o erro exato do legado |
+| Webhook de pagamento sem verificação | **Crítico** | `X-Gateway-Signature` obrigatória + idempotência; é o erro exato do legado |
+| Credenciais VirtualPay do legado vazadas | **Alto** | Rotacionar antes de usar; no novo sistema em `.env`/cifradas, nunca em código |
 | Vazamento de PII de consulta | **Alto** | Cifra em repouso, TTL, expurgo, mascaramento; escopo fail-closed já ativo |
-| Pix Automático não suportado pela VirtualPay como esperado | **Médio** | Contrato isola a recorrência; confirmar com API real antes da fase D; fallback cartão/renovação manual |
+| Sem recorrência automática — cliente esquece de renovar | **Médio** | Ciclo pré-pago com lembrete antes do vencimento + carência antes de cair no gratuito |
 | Remover Cashier quebra o que a suíte cobre | **Médio** | `docs/poda.md` guia a remoção; `composer check` depois de cada corte |
 | Circuit breaker esconder consulta boa | **Baixo** | Meio-aberto testa recuperação; toggle manual no admin; métrica de sucesso por provider no relatório |
 
