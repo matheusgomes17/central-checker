@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "web-asset-generator@web-asset-generator-marketplace": true
+  }
+}

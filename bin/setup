@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+#
+# Põe o projeto de pé em uma máquina limpa, e pode rodar de novo.
+#
+# Rodar de novo é o requisito difícil. Um script de bootstrap que só funciona
+# uma vez é um script que ninguém roda depois — e "depois" é quando a pessoa
+# mais precisa dele: ao trocar de branch, ao voltar de férias, ao descobrir que
+# o banco local ficou estranho. Por isso cada passo aqui verifica antes de
+# escrever, e o único que não pode ser repetido — gerar a APP_KEY, que
+# invalidaria tudo que está cifrado no banco — é o que mais se protege.
+#
+# O CI não usa este script: lá os serviços vêm do runner e não do Compose, e o
+# checkout é sempre novo. O que o CI roda é `composer setup`.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+BOLD=$'\e[1m'
+RESET=$'\e[0m'
+
+step() { printf '\n%s==> %s%s\n' "$BOLD" "$1" "$RESET"; }
+fail() { printf '\n%s\n' "erro: $1" >&2; exit 1; }
+
+require() {
+    command -v "$1" >/dev/null 2>&1 || fail "$1 não está instalado. $2"
+}
+
+step 'Conferindo o que precisa estar instalado'
+require php 'Instale o PHP 8.4 ou mais novo.'
+require composer 'Veja https://getcomposer.org/download/'
+require npm 'Instale o Node 22 ou mais novo.'
+require docker 'Instale o Docker Desktop ou o Docker Engine.'
+docker compose version >/dev/null 2>&1 || fail 'o plugin "docker compose" não está disponível.'
+
+php -r 'exit(PHP_VERSION_ID >= 80400 ? 0 : 1);' || fail "este projeto exige PHP 8.4; encontrei $(php -r 'echo PHP_VERSION;')."
+
+step 'Preparando o .env'
+if [ -f .env ]; then
+    echo '.env já existe, mantido como está.'
+else
+    cp .env.example .env
+    echo '.env criado a partir do .env.example.'
+fi
+
+env_value() {
+    sed -n "s/^$1=//p" .env | head -n1 | tr -d '"' | tr -d "'"
+}
+
+DB_USERNAME="$(env_value DB_USERNAME)"
+DB_DATABASE="$(env_value DB_DATABASE)"
+
+step 'Subindo os serviços (Postgres, Redis, Mailpit, MinIO, Meilisearch)'
+docker compose up -d
+
+printf 'esperando o Postgres aceitar conexão'
+for _ in $(seq 1 60); do
+    if docker compose exec -T pgsql pg_isready -q -U "$DB_USERNAME" -d "$DB_DATABASE" 2>/dev/null; then
+        printf ' pronto\n'
+        break
+    fi
+    printf '.'
+    sleep 1
+done
+docker compose exec -T pgsql pg_isready -q -U "$DB_USERNAME" -d "$DB_DATABASE" 2>/dev/null \
+    || fail 'o Postgres não subiu. Veja `docker compose logs pgsql`.'
+
+# A base de testes é criada pelo script de inicialização do contêiner, que só
+# roda quando o volume é novo. Quem já tinha o volume de antes não a tem.
+if ! docker compose exec -T pgsql psql -U "$DB_USERNAME" -lqt | cut -d '|' -f1 | grep -qw testing; then
+    docker compose exec -T pgsql createdb -U "$DB_USERNAME" testing
+    echo 'base "testing" criada.'
+fi
+
+step 'Instalando dependências PHP'
+composer install
+
+step 'Chave da aplicação'
+if [ -n "$(env_value APP_KEY)" ]; then
+    echo 'APP_KEY já definida, mantida. Gerar outra tornaria ilegível tudo que está cifrado no banco.'
+else
+    php artisan key:generate
+fi
+
+step 'Migrando e semeando'
+php artisan migrate
+php artisan db:seed
+
+step 'Assets'
+php artisan filament:assets
+npm install
+npm run build
+
+step 'Pronto'
+cat <<'TXT'
+Suba a aplicação com:
+
+    composer dev        # servidor, fila, logs e Vite juntos
+
+E entre em http://localhost:8000 com qualquer um dos usuários que o seeder
+criou — a senha de todos é "password":
+
+    ana@example.test      super admin, dona da Acme, com acesso ao /admin
+    bruno@example.test    Globex em período de teste
+    carla@example.test    Initech inadimplente, para ver um time suspenso
+    joao@example.test     em dois times, com papel diferente em cada
+
+Outros endereços úteis:
+
+    http://localhost         a mesma aplicação, servida pelo contêiner
+    http://localhost:8025    Mailpit, onde chegam os e-mails
+    http://localhost:8900    console do MinIO (sail / password)
+
+Para rodar a suíte:
+
+    composer check          tudo que o CI checa, menos os testes de browser
+    composer test:browser   exige `npx playwright install chromium` uma vez
+TXT

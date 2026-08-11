@@ -1,0 +1,250 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+# Um push novo no mesmo ref cancela a execução anterior. O resultado dela já
+# não interessa, e runner ocupado com trabalho descartado é o que faz a fila
+# crescer até o CI deixar de caber no orçamento de tempo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Os cinco jobs abaixo rodam em paralelo de propósito: quem quebrou o Pint
+# descobre em um minuto, sem esperar a suíte inteira. O preço é um
+# `composer install` por job — pago de bom grado, porque é tempo de máquina
+# em paralelo trocado por tempo de pessoa em série.
+#
+# Não há matriz de PHP: a árvore de dependências instalada exige 8.4.1+
+# (symfony/* v8.1, spatie/laravel-activitylog 5), então 8.3 não instala.
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      # O Peck delega a checagem ortográfica ao aspell, que não vem no runner.
+      - name: Install aspell
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends aspell aspell-en
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Pint
+        run: composer lint:check
+
+      - name: Rector
+        run: composer refactor:check
+
+      - name: Peck
+        run: composer spell:check
+
+  static:
+    name: static
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: PHPStan
+        run: composer types:check
+
+      - name: Type coverage
+        run: composer types:coverage
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+
+    # Espelham os serviços do compose.yaml. O .env.example já aponta para
+    # 127.0.0.1, então nenhuma variável precisa ser sobrescrita aqui.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: app
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sail -d app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pcov em vez de xdebug: mede cobertura em uma fração do tempo, e o que
+      # este job precisa é do número, não de depuração passo a passo.
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, redis, pcov
+          tools: composer:v2
+          coverage: pcov
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      # A suíte roda contra a base "testing" (ver phpunit.xml). No Sail ela é
+      # criada pelo script de inicialização do container do Postgres.
+      - name: Create testing database
+        env:
+          PGPASSWORD: password
+        run: psql -h 127.0.0.1 -U sail -d app -c 'CREATE DATABASE testing;'
+
+      - name: Setup application
+        run: composer setup
+
+      - name: Tests with coverage
+        run: composer test:coverage
+
+  browser:
+    name: browser
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: app
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sail -d app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, redis
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Create testing database
+        env:
+          PGPASSWORD: password
+        run: psql -h 127.0.0.1 -U sail -d app -c 'CREATE DATABASE testing;'
+
+      # Constrói os assets: os testes de browser exercitam justamente o
+      # JavaScript, e sem o manifesto do Vite a página nem monta.
+      - name: Setup application
+        run: composer setup
+
+      # Só o Chromium: baixar Firefox e WebKit custa minutos e nenhum teste
+      # daqui pede outro navegador.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        run: composer test:browser
+
+  security:
+    name: security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      # --locked audita o composer.lock sem instalar nada: é o que está
+      # declarado que vai para produção, e o job termina em segundos.
+      - name: Composer audit
+        run: composer audit --locked
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts
+
+      # O corte em "high" é deliberado: advisory baixo em dependência de build
+      # bloqueando PR alheio ensina a ignorar o job inteiro.
+      - name: Npm audit
+        run: npm audit --audit-level=high

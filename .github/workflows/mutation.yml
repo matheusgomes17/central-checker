@@ -1,0 +1,79 @@
+name: mutation
+
+# Fora do CI de PR de propósito: a suíte inteira roda uma vez e depois cada
+# mutação roda os testes que cobrem a linha alterada. Isso não cabe no
+# orçamento de seis minutos, e um sinal que atrasa todo PR vira sinal ignorado.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: mutation
+    runs-on: ubuntu-latest
+
+    # A medição levou 26 minutos na máquina de desenvolvimento. O teto existe
+    # para que uma execução travada seja cortada em vez de consumir a hora.
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: app
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sail -d app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, redis, pcov
+          tools: composer:v2
+          coverage: pcov
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Create testing database
+        env:
+          PGPASSWORD: password
+        run: psql -h 127.0.0.1 -U sail -d app -c 'CREATE DATABASE testing;'
+
+      - name: Setup application
+        run: composer setup
+
+      # A lista de classes mora no composer.json, não aqui: quem rodar
+      # `composer test:mutate` na máquina precisa medir a mesma coisa que o
+      # agendamento mede, senão o número da noite não diz nada sobre o local.
+      - name: Mutation testing
+        run: composer test:mutate

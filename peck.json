@@ -1,0 +1,49 @@
+{
+    "preset": "laravel",
+    "ignore": {
+        "words": [
+            "activitylog",
+            "balancer",
+            "batchable",
+            "boilerplate",
+            "cancelling",
+            "flux",
+            "ids",
+            "infolist",
+            "infolists",
+            "inviter",
+            "livewire",
+            "mailpit",
+            "meilisearch",
+            "minio",
+            "mrr",
+            "navlist",
+            "observability",
+            "oversized",
+            "passkey",
+            "passkeys",
+            "pci",
+            "pgsql",
+            "pii",
+            "proration",
+            "pulse",
+            "reimplementing",
+            "sail",
+            "sentry",
+            "signups",
+            "telescope",
+            "tenancy",
+            "tenant",
+            "tenants",
+            "unscoped",
+            "uptime"
+        ],
+        "paths": [
+            "bootstrap/cache",
+            "docs",
+            "PLANEJAMENTO.md",
+            "public/build",
+            "storage"
+        ]
+    }
+}

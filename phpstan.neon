@@ -1,0 +1,43 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - bootstrap/app.php
+        - config/
+        - database/
+        - modules/
+        - routes/
+        - tests/
+
+    level: max
+
+    excludePaths:
+        analyse:
+            # A DSL de arquitetura do Pest é resolvida por __call: arch() é
+            # declarado como TestCall, que não expõe expect()/preset(). Analisar
+            # esses arquivos só produz falso positivo sobre método inexistente.
+            # As regras em si são verificadas rodando a suíte Arch.
+            - tests/Arch
+
+    # As exceções abaixo também valem para modules/*/tests, que ainda não têm
+    # ocorrências. Sem isso o PHPStan reclama de padrão não utilizado.
+    reportUnmatchedIgnoredErrors: false
+
+    ignoreErrors:
+        # Testes leem modelos recém-persistidos via ->fresh(), ->first() e
+        # ->refresh(), que o PHPStan tipa como nullable. Exigir guarda de null em
+        # cada asserção é ruído: se vier null, o teste falha de qualquer forma.
+        # A regra continua valendo integralmente no código de produção.
+        -
+            identifier: property.nonObject
+            paths:
+                - tests/*
+                - modules/*/tests/*
+        -
+            identifier: method.nonObject
+            paths:
+                - tests/*
+                - modules/*/tests/*

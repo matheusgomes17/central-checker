@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Arch">
+            <directory>tests/Arch</directory>
+        </testsuite>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Modules">
+            <directory suffix="Test.php">modules</directory>
+        </testsuite>
+        <!-- Fora da suite padrao de proposito: exige playwright e um navegador
+             instalados. Rode com `composer test:browser`. -->
+        <testsuite name="Browser">
+            <directory>tests/Browser</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+            <directory>modules</directory>
+        </include>
+    </source>
+    <php>
+        <!-- A suite cresceu alem do limite padrao de 128M do PHP. Definir aqui,
+             e nao no script do composer, e o que garante o limite tambem no
+             processo filho que o `artisan test` inicia, que nao herda -d. -->
+        <ini name="memory_limit" value="1G"/>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_DATABASE" value="testing"/>
+        <env name="DB_URL" value=""/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Sem `force`, de proposito. O PHPUnit so define a variavel quando ela
+             ainda nao existe no ambiente do processo, entao esta chave falsa
+             cobre a suite offline, mas cede a chave de teste real quando ela
+             vem exportada no shell:
+
+                 STRIPE_INTEGRATION=true STRIPE_SECRET=sk_test_real php artisan test ...
+
+             Sem isso, uma guarda de recusa que sumisse por engano deixaria o
+             codigo chegar ate o swap() e ligar de verdade para a Stripe com a
+             chave do .env — criando objeto na conta de teste de verdade e
+             mascarando exatamente o buraco que estes testes existem para
+             pegar. Adicionar `force="true"` aqui quebraria o opt-in acima.
+
+             O valor precisa bater com StripeIntegrationTest::SENTINEL_SECRET:
+             esse teste pula quando a chave configurada e essa aqui, para nao
+             tentar uma conexao de verdade quando so STRIPE_INTEGRATION=true
+             foi passado sem uma chave real — sem essa correspondencia o teste
+             trava esperando resposta de uma rede que nao existe neste
+             ambiente, em vez de pular. -->
+        <env name="STRIPE_SECRET" value="sk_test_deliberately_invalid"/>
+    </php>
+</phpunit>

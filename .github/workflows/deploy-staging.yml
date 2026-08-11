@@ -1,0 +1,43 @@
+name: deploy-staging
+
+# Dispara depois do CI, não em paralelo com ele: `workflow_run` só entrega o
+# evento quando a execução do ci termina, e a condição abaixo exige que tenha
+# terminado verde. Deploy que começa junto com os testes não é deploy testado.
+on:
+  workflow_run:
+    workflows:
+      - ci
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+
+    # Duas travas. A primeira é o resultado do CI. A segunda é a variável de
+    # repositório DEPLOY_STAGING: enquanto não existir um ambiente de staging
+    # de verdade, este workflow fica parado em vez de falhar toda noite por
+    # causa de um segredo que ninguém cadastrou.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      vars.DEPLOY_STAGING == 'true'
+
+    steps:
+      # O deploy hook da Laravel Cloud é uma URL que, chamada por POST, puxa o
+      # commit mais recente do branch configurado no ambiente. Não recebe qual
+      # commit implantar — quem decide isso é a configuração do ambiente lá.
+      - name: Trigger Laravel Cloud deploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.LARAVEL_CLOUD_STAGING_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "DEPLOY_STAGING está ligado mas o segredo LARAVEL_CLOUD_STAGING_DEPLOY_HOOK não existe."
+            exit 1
+          fi
+          curl --fail --silent --show-error --request POST "$DEPLOY_HOOK"
