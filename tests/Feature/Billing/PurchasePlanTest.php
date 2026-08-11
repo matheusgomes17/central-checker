@@ -20,8 +20,9 @@ use Tests\TestCase;
 
 /**
  * PurchasePlan only opens the Pix charge for a plan purchase. Activating the
- * subscription is the webhook's job (Task 6) once the payment is confirmed —
- * these tests pin down that no PlanSubscription is ever created here.
+ * subscription is the job of the webhook (Task 6) once the payment is
+ * confirmed — these tests pin down that no PlanSubscription is ever created
+ * here.
  */
 class PurchasePlanTest extends TestCase
 {

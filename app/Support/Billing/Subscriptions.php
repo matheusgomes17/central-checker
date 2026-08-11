@@ -33,7 +33,7 @@ final class Subscriptions
     {
         $active = $this->active($team);
 
-        if ($active !== null) {
+        if ($active instanceof PlanSubscription) {
             return $active->isExpiring() ? SubscriptionStatus::Expiring : SubscriptionStatus::Active;
         }
 

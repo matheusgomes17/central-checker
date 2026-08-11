@@ -103,6 +103,22 @@ class TeamBillingTest extends TestCase
         $this->assertSame('pro', $billing->plan()->key);
     }
 
+    /**
+     * A subscription row can outlive the plan it points to — the plan was
+     * renamed or removed from configuration after the row was written. This
+     * must fall back to the default plan rather than blow up the billing
+     * page with a 500 for a team that otherwise has an active period.
+     */
+    public function test_an_active_subscription_to_a_plan_no_longer_in_configuration_falls_back_to_the_default(): void
+    {
+        $team = $this->subscribed('discontinued-plan');
+
+        $billing = TeamBilling::for($team);
+
+        $this->assertSame(Plan::default()->key, $billing->plan()->key);
+        $this->assertTrue($billing->hasAccess());
+    }
+
     public function test_a_subscription_past_its_end_grants_nothing(): void
     {
         $team = Team::factory()->create();

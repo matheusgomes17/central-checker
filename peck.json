@@ -3,6 +3,7 @@
     "ignore": {
         "words": [
             "activitylog",
+            "allowlist",
             "autoload",
             "balancer",
             "batchable",
@@ -37,6 +38,7 @@
             "pix",
             "proration",
             "pulse",
+            "reais",
             "reimplementing",
             "reimplements",
             "sail",
@@ -48,6 +50,7 @@
             "tenant",
             "tenants",
             "unscoped",
+            "upserted",
             "uptime",
             "virtualpay"
         ],

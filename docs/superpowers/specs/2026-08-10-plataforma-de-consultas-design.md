@@ -340,6 +340,10 @@ plano de implementação próprio.
   assinatura como ciclo pré-pago renovável (compra e renovação de plano via Pix
   avulso), estados, overrides por usuário. **Remove Cashier/Stripe** aqui, junto
   com a assinatura pré-paga que o substitui.
+
+  **Status:** a Fase D-a (assinatura pré-paga via Pix + remoção do Cashier) está
+  **concluída**. A franquia de consultas (`plan_consultas` + contadores) e os
+  overrides por usuário seguem em D-b/D-c.
 - **E — Admin Filament.** Resources, relatórios, saúde de provider, gestão por
   usuário.
 - **F — Frontend.** Migração/redesign do layout, telas do usuário, LGPD na tela.

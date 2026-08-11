@@ -29,7 +29,7 @@ class ActivatePlan
     {
         $active = $this->subscriptions->active($team);
 
-        if ($active !== null) {
+        if ($active instanceof PlanSubscription) {
             if ($active->plan === $plan->key) {
                 $active->update([
                     'current_period_end' => $active->current_period_end->addDays($plan->periodDays),

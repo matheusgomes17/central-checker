@@ -160,9 +160,9 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * A `PlanSubscription` cujo período já passou ou ainda está em curso,
-     * upsert por time — rodar o seeder de novo atualiza a mesma linha em vez
-     * de criar outra.
+     * A `PlanSubscription` whose period has already passed or is still
+     * running, upserted per team — running the seeder again updates the same
+     * row instead of creating another one.
      */
     private function paidPeriod(Team $team, string $plan, bool $expired): void
     {
@@ -178,9 +178,9 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * Teste sem cartão: não há linha de assinatura, só `trial_ends_at` no
-     * futuro. Só grava na primeira vez — rodar de novo não deveria empurrar o
-     * fim do teste para mais longe.
+     * A card-free trial: there is no subscription row, only `trial_ends_at`
+     * in the future. Only writes on the first run — running it again should
+     * not push the trial's end further out.
      */
     private function startTrial(Team $team): void
     {

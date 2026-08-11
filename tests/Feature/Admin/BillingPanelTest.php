@@ -51,7 +51,7 @@ class BillingPanelTest extends TestCase
      */
     public function test_a_canceling_row_shows_the_expiring_state(): void
     {
-        $subscription = PlanSubscription::factory()->canceling()->for(Team::factory())->create();
+        PlanSubscription::factory()->canceling()->for(Team::factory())->create();
 
         Livewire::test(ListSubscriptions::class)
             ->assertOk()

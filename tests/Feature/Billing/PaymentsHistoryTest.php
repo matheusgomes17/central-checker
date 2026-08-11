@@ -46,28 +46,27 @@ class PaymentsHistoryTest extends TestCase
         $team = Team::factory()->create(['is_personal' => false]);
         $owner = $this->ownerOf($team);
 
-        $paid = PaymentIntent::factory()->for($team)->paid()->create([
+        PaymentIntent::factory()->for($team)->paid()->create([
             'purpose' => PaymentPurpose::Plan,
             'plan' => 'pro',
             'amount_cents' => 9900,
         ]);
 
-        $pending = PaymentIntent::factory()->for($team)->create([
+        PaymentIntent::factory()->for($team)->create([
             'purpose' => PaymentPurpose::Plan,
             'plan' => 'pro',
-            'amount_cents' => 9900,
+            'amount_cents' => 5900,
         ]);
 
         $this->actingAs($owner);
 
-        $component = Livewire::test('pages::settings.billing');
-
-        $payments = $component->instance()->payments();
-
-        $this->assertTrue($payments->contains('id', $paid->id));
-        $this->assertTrue($payments->contains('id', $pending->id));
-
-        $component
+        // Os dois valores aparecendo (um pago, um pendente) prova que a lista
+        // lê todos os intents de plano do time, não só a primeira linha. Os
+        // valores não colidem com nenhum preço de plano exibido na mesma
+        // página (free/pro/business), para não passar por coincidência.
+        Livewire::test('pages::settings.billing')
+            ->assertSee('99.00')
+            ->assertSee('59.00')
             ->assertSee(__('Paid'))
             ->assertSee(__('Pending'));
     }
@@ -77,15 +76,15 @@ class PaymentsHistoryTest extends TestCase
         $team = Team::factory()->create(['is_personal' => false]);
         $owner = $this->ownerOf($team);
 
-        $recharge = PaymentIntent::factory()->for($team)->paid()->create([
+        PaymentIntent::factory()->for($team)->paid()->create([
             'purpose' => PaymentPurpose::Recharge,
+            'amount_cents' => 12345,
         ]);
 
         $this->actingAs($owner);
 
-        $payments = Livewire::test('pages::settings.billing')->instance()->payments();
-
-        $this->assertFalse($payments->contains('id', $recharge->id));
+        Livewire::test('pages::settings.billing')
+            ->assertDontSee('123.45');
     }
 
     private function ownerOf(Team $team): User

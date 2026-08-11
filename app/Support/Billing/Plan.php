@@ -42,6 +42,19 @@ final readonly class Plan
     }
 
     /**
+     * Like `find()`, but for callers that display a plan key that may no
+     * longer be in configuration — a subscription row referencing a plan
+     * that was later renamed or removed — and need to fall back instead of
+     * throwing.
+     */
+    public static function tryFind(string $key): ?self
+    {
+        $plans = self::all();
+
+        return $plans[$key] ?? null;
+    }
+
+    /**
      * The plan a team without an active subscription is on.
      *
      * Exists so that "no subscription" never means "no limits": not paying is

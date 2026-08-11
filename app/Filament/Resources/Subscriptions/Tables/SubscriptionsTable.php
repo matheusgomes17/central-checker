@@ -23,12 +23,12 @@ class SubscriptionsTable
                 TextColumn::make('plan')
                     ->label(__('Plan'))
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => Plan::all()[$state]?->name ?? $state),
+                    ->formatStateUsing(fn (string $state): string => self::planName($state)),
                 TextColumn::make('state')
                     ->label(__('State'))
                     ->badge()
-                    ->state(fn (PlanSubscription $record) => self::rowStatus($record)->label())
-                    ->color(fn (PlanSubscription $record) => self::rowStatus($record)->color()),
+                    ->state(fn (PlanSubscription $record): string => self::rowStatus($record)->label())
+                    ->color(fn (PlanSubscription $record): string => self::rowStatus($record)->color()),
                 TextColumn::make('current_period_end')
                     ->label(__('Renews / ends'))
                     ->dateTime()
@@ -68,5 +68,16 @@ class SubscriptionsTable
         }
 
         return $r->isExpiring() ? SubscriptionStatus::Expiring : SubscriptionStatus::Active;
+    }
+
+    /**
+     * The plan's display name, or the raw stored key when the row's plan is
+     * no longer in configuration (renamed or removed after the fact).
+     */
+    private static function planName(string $state): string
+    {
+        $plan = Plan::tryFind($state);
+
+        return $plan instanceof Plan ? $plan->name : $state;
     }
 }

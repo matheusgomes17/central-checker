@@ -51,7 +51,7 @@ final readonly class TeamBilling
     {
         $active = resolve(Subscriptions::class)->active($this->team);
 
-        return $active !== null ? (Plan::find($active->plan) ?? Plan::default()) : Plan::default();
+        return $active !== null ? (Plan::tryFind($active->plan) ?? Plan::default()) : Plan::default();
     }
 
     public function onTrial(): bool
@@ -109,7 +109,11 @@ final readonly class TeamBilling
      */
     public function hasAccess(): bool
     {
-        return $this->subscribed() || $this->onTrial();
+        if ($this->subscribed()) {
+            return true;
+        }
+
+        return $this->onTrial();
     }
 
     /**
