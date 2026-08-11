@@ -7,6 +7,7 @@ namespace Modules\Pagamentos\Actions;
 use App\Models\Team;
 use App\Support\TenantManager;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Str;
 use Modules\Pagamentos\Contracts\PaymentGateway;
 use Modules\Pagamentos\Enums\PaymentPurpose;
 use Modules\Pagamentos\Enums\PaymentStatus;
@@ -39,7 +40,7 @@ class CreateRecharge
         }
 
         return $this->tenants->forTenant($team, function () use ($team, $amountCents, $payer, $expiration): PaymentIntent {
-            $reference = 'RECHARGE-'.$team->getKey().'-'.uniqid();
+            $reference = 'RECHARGE-'.$team->getKey().'-'.Str::uuid()->toString();
 
             $intent = PaymentIntent::query()->create([
                 'reference' => $reference,
