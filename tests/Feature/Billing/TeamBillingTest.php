@@ -60,7 +60,8 @@ class TeamBillingTest extends TestCase
      */
     public function test_a_card_free_trial_grants_access(): void
     {
-        // trial_ends_at não é fillable no Team: quem preenche é o Cashier.
+        // trial_ends_at não é fillable no Team; forceFill é o único jeito de
+        // gravá-lo fora de uma migration.
         $team = Team::factory()->create();
         $team->forceFill(['trial_ends_at' => now()->addDays(14)])->save();
 

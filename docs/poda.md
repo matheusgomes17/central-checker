@@ -14,30 +14,27 @@ item ganha uma migration de remoção — a ordem muda e o risco também.
 
 ---
 
-## Cobrança (Cashier + Stripe)
+## Cobrança (assinatura pré-paga via Pix)
 
 Tire se o produto for gratuito, cobrar fora do aplicativo, ou usar outro
-provedor.
+provedor. Não há mais Cashier/Stripe neste boilerplate — a cobrança é
+`PlanSubscription` local, resolvida pelo webhook da VirtualPay (veja a poda de
+Webhooks acima para o gateway em si).
 
-1. **Código:** `app/Support/Billing/`, `app/Http/Controllers/BillingController.php`,
-   `app/Http/Controllers/StripeWebhookController.php`,
-   `app/Http/Middleware/EnsureTeamIsNotSuspended.php`,
+1. **Código:** `app/Support/Billing/`, `app/Models/PlanSubscription.php`,
    `app/Http/Middleware/EnsureWithinPlanLimits.php`,
-   `app/Notifications/Billing/`, `app/Filament/Resources/Subscriptions/`,
+   `app/Filament/Resources/Subscriptions/`,
    `app/Filament/Widgets/RevenueOverview.php`,
    `resources/views/pages/settings/⚡billing.blade.php`
-2. **Model `Team`:** tire o trait `Billable` e o que depender dele.
+2. **Model `Team`:** tire `trial_ends_at` e o que depender dele.
 3. **Provider:** tire `configureBilling()` do `AppServiceProvider`.
-4. **Rotas:** o grupo de `settings/billing` e `stripe/webhook` em
-   `routes/web.php` e `routes/settings.php`.
-5. **Aliases:** `limits` e `not-suspended` em `bootstrap/app.php`.
-6. **Config e migrations:** `config/billing.php`, `config/cashier.php`, a
-   migration de `subscriptions` e as colunas do Cashier em `teams`.
+4. **Rotas:** a rota `settings/billing` em `routes/settings.php`.
+5. **Alias:** `plan-feature` em `bootstrap/app.php`.
+6. **Config e migrations:** `config/billing.php`, a migration de
+   `plan_subscriptions` e a coluna `trial_ends_at` de `teams`.
 7. **Papel:** `TeamRole::Billing` e as permissões `ViewBilling` e
    `ManageBilling` nos enums — e rode o seeder de papéis, que sincroniza.
 8. **Testes:** `tests/Feature/Billing/`, `tests/Feature/Admin/BillingPanelTest.php`.
-9. **Pacote:** `composer remove laravel/cashier`.
-10. **Ambiente:** `STRIPE_*` no `.env.example`.
 
 Cuidado: o `DemoSeeder` cria assinaturas. Tire o método `subscriptions()` dele
 junto, ou o seeder quebra na primeira execução.
@@ -98,8 +95,8 @@ Tire se você não vai entregar eventos para sistemas de clientes.
 4. **Migrations:** `webhook_endpoints` e `webhook_deliveries`.
 5. **Testes:** `tests/Feature/Webhooks/`.
 
-O `WebhookSignature` é usado também na verificação do webhook da Stripe. Se você
-manteve a cobrança, ele fica.
+O `WebhookSignature` é usado também na verificação do webhook da VirtualPay. Se
+você manteve a cobrança, ele fica.
 
 ---
 

@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\ImpersonationController;
-use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\VirtualPayWebhookController;
 use App\Http\Middleware\EnsureTeamMembership;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
-use Laravel\Cashier\Http\Controllers\PaymentController;
 
 Route::view('/', 'welcome')->name('home');
 
@@ -37,29 +34,6 @@ Route::middleware(['guest', 'throttle:login'])->group(function (): void {
 });
 
 require __DIR__.'/settings.php';
-
-/*
-|--------------------------------------------------------------------------
-| Cobrança
-|--------------------------------------------------------------------------
-|
-| Registradas aqui porque o controller de webhook é estendido — com as rotas
-| do próprio Cashier ligadas, o mesmo caminho teria duas.
-|
-| Todo routes/web.php roda sob o grupo web (CSRF incluído) independente de
-| onde a rota está declarada no arquivo — não existe "fora do grupo web"
-| dentro deste arquivo. O CSRF é excluído explicitamente em bootstrap/app.php
-| via PreventRequestForgery::except([...]), porque o webhook não tem sessão
-| nem cookie. Quem autentica é a assinatura do payload.
-|
-*/
-
-Route::post(Config::string('cashier.path').'/webhook', [StripeWebhookController::class, 'handleWebhook'])
-    ->name('cashier.webhook');
-
-Route::get(Config::string('cashier.path').'/payment/{id}', [PaymentController::class, 'show'])
-    ->middleware(['web', 'auth'])
-    ->name('cashier.payment');
 
 /*
 |--------------------------------------------------------------------------

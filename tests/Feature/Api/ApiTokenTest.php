@@ -7,9 +7,9 @@ namespace Tests\Feature\Api;
 use App\Enums\ApiAbility;
 use App\Enums\TeamRole;
 use App\Models\ApiToken;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
-use App\Support\Billing\TeamBilling;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -31,11 +31,6 @@ class ApiTokenTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
-
-        // A API deixou de ser gratuita: sem assinatura do Pro, tokenFor()
-        // devolveria um time que o middleware de recurso recusaria com 402
-        // antes de chegar ao que cada teste aqui investiga.
-        config(['billing.plans.pro.price_id' => 'price_pro']);
     }
 
     public function test_a_request_without_a_token_is_refused(): void
@@ -222,13 +217,7 @@ class ApiTokenTest extends TestCase
         $team->memberships()->create(['user_id' => $user->id]);
         $user->assignTeamRole($team, $role);
 
-        $team->subscriptions()->create([
-            'type' => TeamBilling::SUBSCRIPTION,
-            'stripe_id' => 'sub_'.fake()->uuid(),
-            'stripe_status' => 'active',
-            'stripe_price' => 'price_pro',
-            'quantity' => 1,
-        ]);
+        PlanSubscription::factory()->active()->create(['team_id' => $team->id, 'plan' => 'pro']);
 
         $token = $user->createToken('teste', $ability->implies());
 

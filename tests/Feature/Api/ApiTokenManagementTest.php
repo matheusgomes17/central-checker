@@ -8,9 +8,9 @@ use App\Enums\ApiAbility;
 use App\Enums\SystemRole;
 use App\Enums\TeamRole;
 use App\Models\ApiToken;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
-use App\Support\Billing\TeamBilling;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -33,19 +33,8 @@ class ApiTokenManagementTest extends TestCase
 
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        // A API deixou de ser gratuita: sem assinatura do Pro, qualquer
-        // chamada via apiCall() cairia em 402 antes de testar o que este
-        // arquivo realmente cobre.
-        config(['billing.plans.pro.price_id' => 'price_pro']);
-
         $this->team = Team::factory()->create(['is_personal' => false]);
-        $this->team->subscriptions()->create([
-            'type' => TeamBilling::SUBSCRIPTION,
-            'stripe_id' => 'sub_'.fake()->uuid(),
-            'stripe_status' => 'active',
-            'stripe_price' => 'price_pro',
-            'quantity' => 1,
-        ]);
+        PlanSubscription::factory()->active()->create(['team_id' => $this->team->id, 'plan' => 'pro']);
         $this->user = User::factory()->create();
 
         $this->team->memberships()->create(['user_id' => $this->user->id]);

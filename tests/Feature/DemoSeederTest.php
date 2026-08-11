@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\TeamRole;
 use App\Models\Membership;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
@@ -13,7 +14,6 @@ use App\Support\Billing\TeamBilling;
 use Database\Seeders\DemoSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Cashier\Subscription;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -41,9 +41,17 @@ class DemoSeederTest extends TestCase
         $this->assertSame(4, Team::query()->where('is_personal', false)->count());
         $this->assertSame(14, User::query()->count());
 
-        foreach (['active', 'trialing', 'past_due'] as $status) {
-            $this->assertDatabaseHas('subscriptions', ['stripe_status' => $status]);
-        }
+        $acme = Team::query()->where('slug', 'acme')->firstOrFail();
+        $this->assertTrue(TeamBilling::for($acme)->subscribed());
+        $this->assertSame('business', PlanSubscription::query()->where('team_id', $acme->id)->value('plan'));
+
+        $globex = Team::query()->where('slug', 'globex')->firstOrFail();
+        $this->assertFalse(TeamBilling::for($globex)->subscribed());
+        $this->assertTrue(TeamBilling::for($globex)->onTrial());
+
+        $initech = Team::query()->where('slug', 'initech')->firstOrFail();
+        $this->assertFalse(TeamBilling::for($initech)->subscribed());
+        $this->assertTrue(TeamBilling::for($initech)->ended());
 
         $this->assertSame(2, TeamInvitation::query()->whereNull('accepted_at')->count());
     }
@@ -121,7 +129,7 @@ class DemoSeederTest extends TestCase
             'users' => User::query()->count(),
             'teams' => Team::query()->count(),
             'memberships' => Membership::query()->count(),
-            'subscriptions' => Subscription::query()->count(),
+            'subscriptions' => PlanSubscription::query()->count(),
             'invitations' => TeamInvitation::query()->count(),
         ];
     }

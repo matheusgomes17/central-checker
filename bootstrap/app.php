@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Http\Middleware\AddRequestContext;
 use App\Http\Middleware\ApplyUserPreferences;
 use App\Http\Middleware\EnsurePlanFeature;
-use App\Http\Middleware\EnsureTeamIsNotSuspended;
 use App\Http\Middleware\EnsureTokenAbility;
 use App\Http\Middleware\SetTeamUrlDefaults;
 use App\Http\Middleware\SetTenantFromToken;
@@ -15,7 +14,6 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Config;
 use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -40,7 +38,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'not-suspended' => EnsureTeamIsNotSuspended::class,
             'ability' => EnsureTokenAbility::class,
             'plan-feature' => EnsurePlanFeature::class,
         ]);
@@ -51,18 +48,12 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->booting(function (): void {
         // routes/web.php inteiro roda sob o grupo web, CSRF incluído — onde a
-        // rota fica declarada no arquivo não muda isso. Os webhooks de gateway
-        // não têm sessão nem cookie; quem autentica é a assinatura do payload,
+        // rota fica declarada no arquivo não muda isso. O webhook do gateway
+        // não tem sessão nem cookie; quem autentica é a assinatura do payload,
         // então o CSRF precisa ser excluído explicitamente aqui, não só
         // registrado fora de um grupo em routes/web.php (isso não bastava).
-        //
-        // Registrado em booting() (não dentro de withMiddleware acima) porque
-        // o callback de withMiddleware roda cedo demais — antes de
-        // LoadConfiguration/RegisterFacades — e Config::string() aqui lançaria
-        // "A facade root has not been set" tanto no console quanto no HTTP.
         PreventRequestForgery::except([
             'webhooks/virtualpay',
-            Config::string('cashier.path').'/webhook',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

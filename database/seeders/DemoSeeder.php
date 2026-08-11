@@ -6,10 +6,10 @@ namespace Database\Seeders;
 
 use App\Enums\SystemRole;
 use App\Enums\TeamRole;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
-use App\Support\Billing\TeamBilling;
 use Illuminate\Database\Seeder;
 use RuntimeException;
 
@@ -34,12 +34,18 @@ class DemoSeeder extends Seeder
     private const string PASSWORD = 'password';
 
     /**
+     * `status` é o estado da assinatura pré-paga: `active` cria uma
+     * `PlanSubscription` dentro do período pago, `trialing` deixa sem
+     * assinatura e marca `trial_ends_at` no futuro, `expired` cria uma
+     * `PlanSubscription` cujo período já passou, e `none` não cria nada — o
+     * time cai no plano gratuito por ausência de assinatura.
+     *
      * @var list<array{slug: string, name: string, status: string, price: string, plan: string}>
      */
     private const array TEAMS = [
         ['slug' => 'acme', 'name' => 'Acme', 'status' => 'active', 'price' => 'business', 'plan' => 'Business'],
         ['slug' => 'globex', 'name' => 'Globex', 'status' => 'trialing', 'price' => 'pro', 'plan' => 'Pro em teste'],
-        ['slug' => 'initech', 'name' => 'Initech', 'status' => 'past_due', 'price' => 'pro', 'plan' => 'Pro inadimplente'],
+        ['slug' => 'initech', 'name' => 'Initech', 'status' => 'expired', 'price' => 'pro', 'plan' => 'Pro vencido'],
         ['slug' => 'hooli', 'name' => 'Hooli', 'status' => 'none', 'price' => 'free', 'plan' => 'Gratuito acima do teto'],
     ];
 
@@ -93,7 +99,7 @@ class DemoSeeder extends Seeder
         foreach (self::TEAMS as $definition) {
             $teams[$definition['slug']] = Team::withoutGlobalScopes()->firstOrCreate(
                 ['slug' => $definition['slug']],
-                ['name' => $definition['name'], 'is_personal' => false, 'stripe_id' => 'cus_demo_'.$definition['slug']],
+                ['name' => $definition['name'], 'is_personal' => false],
             );
         }
 
@@ -139,23 +145,47 @@ class DemoSeeder extends Seeder
     private function subscriptions(array $teams): void
     {
         foreach (self::TEAMS as $definition) {
-            // Time sem assinatura existe de propósito na demonstração: é o que
-            // mostra a tela de excedente, que só aparece no plano gratuito.
-            if ($definition['status'] === 'none') {
-                continue;
-            }
+            $team = $teams[$definition['slug']];
 
-            $teams[$definition['slug']]->subscriptions()->updateOrCreate(
-                ['type' => TeamBilling::SUBSCRIPTION],
-                [
-                    'stripe_id' => 'sub_demo_'.$definition['slug'],
-                    'stripe_status' => $definition['status'],
-                    'stripe_price' => $definition['price'],
-                    'quantity' => 1,
-                    'trial_ends_at' => $definition['status'] === 'trialing' ? now()->addDays(9) : null,
-                    'ends_at' => null,
-                ],
-            );
+            match ($definition['status']) {
+                'active' => $this->paidPeriod($team, $definition['price'], expired: false),
+                'expired' => $this->paidPeriod($team, $definition['price'], expired: true),
+                'trialing' => $this->startTrial($team),
+                // Time sem assinatura existe de propósito na demonstração: é o
+                // que mostra a tela de excedente, que só aparece no plano
+                // gratuito.
+                default => null,
+            };
+        }
+    }
+
+    /**
+     * A `PlanSubscription` cujo período já passou ou ainda está em curso,
+     * upsert por time — rodar o seeder de novo atualiza a mesma linha em vez
+     * de criar outra.
+     */
+    private function paidPeriod(Team $team, string $plan, bool $expired): void
+    {
+        PlanSubscription::query()->updateOrCreate(
+            ['team_id' => $team->id],
+            [
+                'plan' => $plan,
+                'current_period_start' => $expired ? now()->subDays(60) : now(),
+                'current_period_end' => $expired ? now()->subDays(30) : now()->addDays(30),
+                'canceled_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * Teste sem cartão: não há linha de assinatura, só `trial_ends_at` no
+     * futuro. Só grava na primeira vez — rodar de novo não deveria empurrar o
+     * fim do teste para mais longe.
+     */
+    private function startTrial(Team $team): void
+    {
+        if ($team->trial_ends_at === null) {
+            $team->forceFill(['trial_ends_at' => now()->addDays(9)])->save();
         }
     }
 
@@ -188,7 +218,7 @@ class DemoSeeder extends Seeder
             [
                 ['ana@example.test', self::PASSWORD, 'Super admin, dona da Acme, /admin liberado'],
                 ['bruno@example.test', self::PASSWORD, 'Globex em período de teste'],
-                ['carla@example.test', self::PASSWORD, 'Initech inadimplente — time suspenso'],
+                ['carla@example.test', self::PASSWORD, 'Initech com assinatura vencida — voltou ao plano gratuito'],
                 ['joao@example.test', self::PASSWORD, 'Em dois times, com papel diferente em cada'],
                 ['karen@example.test', self::PASSWORD, 'Hooli sem assinatura, acima do teto do plano gratuito'],
             ],

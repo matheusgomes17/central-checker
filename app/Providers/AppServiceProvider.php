@@ -27,7 +27,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
-use Laravel\Cashier\Cashier;
 use Laravel\Pulse\Entry;
 use Laravel\Pulse\Facades\Pulse;
 use Laravel\Pulse\Value;
@@ -82,11 +81,6 @@ class AppServiceProvider extends ServiceProvider
 
             return $counters;
         });
-
-        // As rotas do Cashier são registradas por ele mesmo. Ignorá-las aqui é
-        // o que permite registrar as nossas, com o controller estendido, sem
-        // ficar com duas rotas para o mesmo caminho.
-        Cashier::ignoreRoutes();
     }
 
     /**
@@ -117,13 +111,6 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * Point Cashier at the team.
-     *
-     * Cashier assumes the User model unless told otherwise, and there is no
-     * environment variable for this — it has to be said in code, before
-     * anything resolves a billable.
-     */
     /**
      * Point Sanctum at the token model that knows about teams.
      */
@@ -178,8 +165,6 @@ class AppServiceProvider extends ServiceProvider
 
     protected function configureBilling(): void
     {
-        Cashier::useCustomerModel(Team::class);
-
         PlanFeature::registerAll();
     }
 

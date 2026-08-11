@@ -97,19 +97,6 @@ return [
 
     'manage_permission' => TeamPermission::ManageBilling->value,
 
-    /*
-    |--------------------------------------------------------------------------
-    | Verificação contra a Stripe de verdade
-    |--------------------------------------------------------------------------
-    |
-    | A suíte é offline por padrão. Ligar isto faz o teste de integração rodar
-    | contra a API da Stripe, o que exige chave e price id válidos — e deixa a
-    | suíte dependente de rede, que é por que fica desligado.
-    |
-    */
-
-    'stripe_integration' => (bool) env('STRIPE_INTEGRATION', false),
-
     'recharge' => [
         // Limites da recarga por Pix, em centavos. A VirtualPay fala reais na
         // fronteira; aqui é centavos como o resto do dinheiro do sistema.

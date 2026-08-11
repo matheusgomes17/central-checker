@@ -69,11 +69,9 @@ class TenantManager
         // Catálogo global: o operador define as consultas e todos os times veem
         // o mesmo conjunto. Não pertence a time nenhum, então não é escopado.
         \Modules\Consultas\Models\Consulta::class,
-        // Assinatura pré-paga em substituição ao Cashier: pertence ao time, mas
-        // é resolvida pelo webhook de pagamento sem nenhum tenant no contexto —
-        // igual à antiga tabela `subscriptions` do Cashier, já listada abaixo em
-        // UNSCOPED_TABLES. Quem filtra o acesso é a relação team(), não o escopo
-        // global.
+        // Assinatura pré-paga: pertence ao time, mas é resolvida pelo webhook de
+        // pagamento sem nenhum tenant no contexto. Quem filtra o acesso é a
+        // relação team(), não o escopo global.
         PlanSubscription::class,
     ];
 
@@ -94,11 +92,6 @@ class TenantManager
         'roles',
         'model_has_roles',
         'model_has_permissions',
-        // Assinaturas pertencem ao Cashier, que sempre as consulta pela relação
-        // do time — o filtro por time já está lá. Envolvê-las no escopo global
-        // quebraria justamente o webhook, que procura a assinatura pelo id da
-        // Stripe sem nenhum tenant no contexto.
-        'subscriptions',
     ];
 
     private ?Team $tenant = null;

@@ -7,9 +7,9 @@ namespace Tests\Feature\Api;
 use App\Enums\ApiAbility;
 use App\Enums\TeamRole;
 use App\Models\ApiToken;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
-use App\Support\Billing\TeamBilling;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -32,11 +32,6 @@ class TokenAbilityTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
-
-        // A API deixou de ser gratuita: sem assinatura do Pro, o time
-        // resolvido para o pedido cairia em 402 antes de chegar ao que este
-        // arquivo investiga.
-        config(['billing.plans.pro.price_id' => 'price_pro']);
 
         Route::middleware(['api', 'auth:sanctum'])->group(function (): void {
             Route::get('probe/unknown-ability', fn (): string => 'ok')->middleware('ability:desconhecida');
@@ -71,13 +66,7 @@ class TokenAbilityTest extends TestCase
         // Sem token, o tenant cai de volta no time atual do usuário — o
         // pessoal que o factory já criou — e ele também responde ao
         // middleware de recurso de plano.
-        $user->currentTeam->subscriptions()->create([
-            'type' => TeamBilling::SUBSCRIPTION,
-            'stripe_id' => 'sub_'.fake()->uuid(),
-            'stripe_status' => 'active',
-            'stripe_price' => 'price_pro',
-            'quantity' => 1,
-        ]);
+        PlanSubscription::factory()->active()->create(['team_id' => $user->currentTeam->id, 'plan' => 'pro']);
 
         $this->actingAs($user);
 

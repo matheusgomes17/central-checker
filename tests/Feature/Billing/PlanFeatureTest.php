@@ -38,8 +38,6 @@ class PlanFeatureTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
-
-        config(['billing.plans.pro.price_id' => 'price_pro']);
     }
 
     public function test_a_free_team_cannot_reach_the_api(): void
@@ -190,7 +188,7 @@ class PlanFeatureTest extends TestCase
     private function tokenFor(bool $subscribed): array
     {
         $user = User::factory()->create();
-        $team = Team::factory()->create(['is_personal' => false, 'stripe_id' => 'cus_'.fake()->uuid()]);
+        $team = Team::factory()->create(['is_personal' => false]);
 
         $team->memberships()->create(['user_id' => $user->id]);
         $user->assignTeamRole($team, TeamRole::Owner);

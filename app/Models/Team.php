@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
-use Laravel\Cashier\Billable;
 use Override;
 
 /**
@@ -26,7 +25,6 @@ use Override;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- * @property string|null $stripe_id
  * @property Carbon|null $trial_ends_at
  * @property-read Collection<int, TeamInvitation> $invitations
  * @property-read Collection<int, Membership> $memberships
@@ -36,7 +34,7 @@ use Override;
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
-    use Billable, GeneratesUniqueTeamSlugs, HasFactory, SoftDeletes;
+    use GeneratesUniqueTeamSlugs, HasFactory, SoftDeletes;
 
     /**
      * Bootstrap the model and its traits.
@@ -111,6 +109,7 @@ class Team extends Model
     {
         return [
             'is_personal' => 'boolean',
+            'trial_ends_at' => 'datetime',
         ];
     }
 

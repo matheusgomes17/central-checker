@@ -63,7 +63,6 @@ class RouteAuthorizationTest extends TestCase
         // Cobrança: o recurso é o time atual, e a permissão é verificada contra
         // ele antes de qualquer coisa.
         'billing.edit' => 'exige ViewBilling no time atual',
-        'cashier.payment' => 'confirma um pagamento da própria sessão, pelo id do PaymentIntent',
 
         // Guardadas pelo papel de plataforma.
         'impersonate.start' => 'exige super-admin na action de impersonation',
