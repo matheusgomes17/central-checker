@@ -328,13 +328,20 @@ O sistema visual "fogo" do legado é redesenhado para Flux + Tailwind v4 (a skil
 de qualquer variante Pro). Telas:
 
 - **Dashboard** — stat-cards (consultas, sucesso, saldo) + timer de plano.
+  **✅ Entregue (Fase F-1).**
 - **Executar consulta** — no lugar do "checker": escolha da consulta, formulário
   de entrada validado, resultado, custo. Estado de "em manutenção" visível.
+  **✅ Entregue (Fase F-1).**
 - **Carteira / Recarga** — saldo, gerar Pix (QR + copia-e-cola), histórico do
-  razão.
+  razão. **Pendente (Fase F-2)** — o backend `Pagamentos`/`PaymentIntent` já
+  existe; F-2 reaproveita o padrão da página de billing.
 - **Planos** — agora **self-service** via VirtualPay (o legado mandava falar no
-  Telegram).
-- **Perfil** e **Histórico** de consultas.
+  Telegram). **Pendente (Fase F-3).**
+- **Perfil** e **Histórico** de consultas. **Pendente (Fase F-4).**
+
+A Fase F-1 também estabeleceu a base do sistema visual "fogo" (tema Flux/Tailwind
+v4 + componentes `x-fire.{stat,glow,plan-timer}`), reaproveitada pelas telas
+seguintes de F-2 a F-4.
 
 App do usuário é 100% Livewire+Flux; a estética do Filament não vaza para o
 produto (ADR 0003).
@@ -392,6 +399,11 @@ plano de implementação próprio.
   Pagamentos** (intents Pix) fica adiada para depois da Fase E — as recargas já
   são visíveis no Razão. Segue a Fase F.
 - **F — Frontend.** Migração/redesign do layout, telas do usuário, LGPD na tela.
+
+  **Status:** **Fase F-1 concluída** (dashboard com stat-cards e timer de
+  plano, tela de executar consulta com formulário validado/resultado/custo/
+  estado de manutenção, e a base do sistema visual "fogo"). Seguem as Fases
+  F-2 (carteira/recarga), F-3 (planos self-service) e F-4 (perfil/histórico).
 
 A ordem não é arbitrária: a carteira precisa do motor de consulta para ter o que
 cobrar; o pagamento precisa da carteira para ter o que creditar; o plano precisa

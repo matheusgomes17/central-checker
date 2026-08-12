@@ -73,6 +73,33 @@ class DashboardTest extends TestCase
             ->assertDontSee('0,0%');
     }
 
+    /**
+     * Plan-timer math tripwire: a 45-day period (30 days elapsed, 15 left)
+     * must render the correct days-left label and fill the bar to
+     * 15/45 ≈ 33%. Both numbers are correct-by-reading in the component but
+     * were never exercised by a test — this pins the arithmetic down.
+     */
+    public function test_the_plan_timer_shows_days_left_and_period_fraction(): void
+    {
+        [$user, $team] = $this->memberOf();
+
+        PlanSubscription::factory()->create([
+            'team_id' => $team->id,
+            'plan' => 'pro',
+            'current_period_start' => now()->subDays(30),
+            'current_period_end' => now()->addDays(15),
+        ]);
+
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $response = $this->actingAs($user)->get(route('dashboard', $team));
+
+        // "expira em 15 dias" — texto do x-fire.plan-timer para daysLeft=15.
+        $response->assertOk()
+            ->assertSee('expira em 15 dias')
+            ->assertSee('aria-valuenow="33"', false);
+    }
+
     public function test_a_non_member_cannot_view_another_teams_dashboard(): void
     {
         $user = User::factory()->create();
