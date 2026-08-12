@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Modules\CheckerApi\Models\Check;
-use Modules\CheckerApi\Support\CircuitBreaker;
 use Modules\CheckerApi\Support\CheckAvailability;
+use Modules\CheckerApi\Support\CircuitBreaker;
 
 it('check ativo com circuito fechado está disponível', function (): void {
     $breaker = new CircuitBreaker;

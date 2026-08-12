@@ -1,6 +1,9 @@
 # Plataforma de consultas — plano assinado e carteira de créditos
 
-**Data:** 2026-08-10 · **Estado:** aprovado, aguardando plano de implementação
+**Data:** 2026-08-10 · **Estado:** **entregue** — todas as fases A–F concluídas,
+produto completo. Ressalvas de go-live seguem de pé: rotacionar as credenciais
+VirtualPay do legado (D3) e cadastrar o segredo real do webhook antes de operar
+em produção.
 
 ## O que estamos construindo
 
@@ -338,7 +341,11 @@ de qualquer variante Pro). Telas:
   Telegram): comparar planos e assinar/renovar via Pix, cada card mostrando as
   consultas incluídas/franquia do plano (diferencial B2C). **✅ Entregue (Fase
   F-3).**
-- **Perfil** e **Histórico** de consultas. **Pendente (Fase F-4).**
+- **Perfil** (via settings/perfil do boilerplate, ligado à navegação do produto) e
+  **Histórico de consultas** (por-usuário, PII mascarada). **✅ Entregue (Fase
+  F-4).**
+
+D8 está **completo**: todas as telas do frontend do produto foram entregues.
 
 A Fase F-1 também estabeleceu a base do sistema visual "fogo" (tema Flux/Tailwind
 v4 + componentes `x-fire.{stat,glow,plan-timer}`), reaproveitada pelas telas
@@ -407,8 +414,13 @@ plano de implementação próprio.
   concluída** (tela de carteira/recarga — saldo, Pix com QR e copia-e-cola,
   razão e histórico de recargas — mais o link de navegação até ela). **Fase
   F-3 concluída** (planos self-service — comparar e assinar/renovar via Pix,
-  franquia por plano visível — mais o link de navegação até ela). Segue a
-  Fase F-4 (perfil/histórico).
+  franquia por plano visível — mais o link de navegação até ela). **Fase F-4
+  concluída** (histórico de consultas por-usuário com PII mascarada, link ao
+  perfil do boilerplate — mais os links de navegação até as duas telas).
+  **Fase F concluída (F-1..F-4).**
+
+**Todas as fases A–F estão entregues** — o produto descrito neste documento está
+completo.
 
 A ordem não é arbitrária: a carteira precisa do motor de consulta para ter o que
 cobrar; o pagamento precisa da carteira para ter o que creditar; o plano precisa

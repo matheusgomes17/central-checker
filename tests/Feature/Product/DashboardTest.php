@@ -79,6 +79,28 @@ class DashboardTest extends TestCase
         $response->assertOk()->assertSee(route('checker.planos', $team), false);
     }
 
+    public function test_a_member_sees_a_link_to_the_historico(): void
+    {
+        [$user, $team] = $this->memberOf();
+
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $response = $this->actingAs($user)->get(route('dashboard', $team));
+
+        $response->assertOk()->assertSee(route('checker.historico', $team), false);
+    }
+
+    public function test_a_member_sees_a_link_to_the_profile(): void
+    {
+        [$user, $team] = $this->memberOf();
+
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $response = $this->actingAs($user)->get(route('dashboard', $team));
+
+        $response->assertOk()->assertSee(route('profile.edit'), false);
+    }
+
     public function test_a_team_without_executions_shows_the_empty_state_not_a_fake_rate(): void
     {
         [$user, $team] = $this->memberOf();

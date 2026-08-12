@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Modules\CheckerApi\Support\CircuitBreaker;
 use Modules\CheckerApi\Support\CheckInput;
+use Modules\CheckerApi\Support\CircuitBreaker;
 use Modules\CheckerApi\Support\FakeProvider;
 use Modules\CheckerApi\Support\ProviderResult;
 use Modules\CheckerApi\Support\ResilientProvider;

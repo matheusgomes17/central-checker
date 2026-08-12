@@ -149,6 +149,24 @@ new #[Title('Dashboard')] class extends Component {
                 </flux:button>
 
                 <flux:button
+                    :href="route('checker.historico', $this->team())"
+                    icon="clock"
+                    wire:navigate
+                    data-test="dashboard-historico"
+                >
+                    {{ __('Histórico') }}
+                </flux:button>
+
+                <flux:button
+                    :href="route('profile.edit')"
+                    icon="user"
+                    wire:navigate
+                    data-test="dashboard-perfil"
+                >
+                    {{ __('Perfil') }}
+                </flux:button>
+
+                <flux:button
                     :href="route('checker.executar', $this->team())"
                     variant="primary"
                     icon="bolt"
