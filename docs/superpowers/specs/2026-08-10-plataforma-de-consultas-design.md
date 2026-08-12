@@ -304,8 +304,12 @@ O painel é do operador e só existe em `/admin` (ADR 0003). Resources:
   (vira `adjustment` no razão). **✅ Entregue (Fase E-b).**
 - **Carteira / Razão** — leitura do razão de um time (append-only, sem editar).
   **✅ Entregue (Fase E-b).**
-- **Recargas / Pagamentos** e **Assinaturas** — estado e histórico. Pendente
-  (Fase E-b).
+- **Assinaturas** — estado e histórico. **✅ Entregue** (`SubscriptionResource`,
+  anterior à Fase E).
+- **Recargas / Pagamentos** — tela dedicada de pagamentos (intents Pix, status).
+  **Adiada para depois da Fase E** — não é parte de E-a/E-b/E-c. As recargas já
+  aparecem no **Razão** (`WalletTransaction` com `type=recharge`); falta só a
+  visão própria de pagamentos, que entra quando houver demanda de operação.
 - **Execuções** — auditoria das consultas rodadas (sem PII crua — ver D9).
   **✅ Entregue (Fase E-b).**
 - **Relatórios** — receita, MRR, consultas/dia, **taxa de sucesso por provider**,
@@ -384,7 +388,9 @@ plano de implementação próprio.
 
   **Status:** **Fase E concluída** (E-a — catálogo, resources de Consultas e
   Planos; E-b — usuários/overrides, crédito manual, carteira/razão, execuções;
-  E-c — saúde de provider e relatórios). Só resta a Fase F.
+  E-c — saúde de provider e relatórios). Uma tela dedicada de **Recargas /
+  Pagamentos** (intents Pix) fica adiada para depois da Fase E — as recargas já
+  são visíveis no Razão. Segue a Fase F.
 - **F — Frontend.** Migração/redesign do layout, telas do usuário, LGPD na tela.
 
 A ordem não é arbitrária: a carteira precisa do motor de consulta para ter o que
