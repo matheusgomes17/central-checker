@@ -18,6 +18,10 @@ export default defineConfig({
                 bunny('Instrument Sans', {
                     weights: [400, 500, 600],
                 }),
+                // Fonte de display do tema "fogo": títulos e a marca, nunca corpo de texto.
+                bunny('Space Grotesk', {
+                    weights: [500, 700],
+                }),
             ],
         }),
         tailwindcss(),
