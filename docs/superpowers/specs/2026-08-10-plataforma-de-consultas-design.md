@@ -295,7 +295,9 @@ O painel é do operador e só existe em `/admin` (ADR 0003). Resources:
 - **Consultas** — catálogo, preço, modo de cobrança, toggle de manutenção.
   **✅ Entregue (Fase E-a).**
 - **Providers** — saúde e estado do circuit breaker, healthcheck manual.
-  Pendente (Fase E-c).
+  **✅ Entregue (Fase E-c)** — página `ProviderHealth` (tabela por provider com
+  estado do breaker e taxa de sucesso em 7 dias) e ações de healthcheck manual
+  e reset do breaker.
 - **Planos** — inclusão de consultas + franquia/ilimitado. **✅ Entregue
   (Fase E-a).**
 - **Usuários** — overrides (bloquear/liberar/preço custom), crédito manual
@@ -307,7 +309,10 @@ O painel é do operador e só existe em `/admin` (ADR 0003). Resources:
 - **Execuções** — auditoria das consultas rodadas (sem PII crua — ver D9).
   **✅ Entregue (Fase E-b).**
 - **Relatórios** — receita, MRR, consultas/dia, **taxa de sucesso por provider**,
-  saldo agregado. Pendente (Fase E-c).
+  saldo agregado. **✅ Entregue** — MRR e receita já vinham de `RevenueOverview`
+  (fase anterior a E-c); consultas/dia, taxa de sucesso global e saldo
+  agregado das carteiras entraram no widget `OperationsOverview`, e a taxa de
+  sucesso por provider na própria página `ProviderHealth` (ambos Fase E-c).
 
 Como no resto do painel: usuário e time são leitura e ação, não edição livre; a
 trilha de auditoria não tem criar/editar/apagar.
@@ -377,9 +382,9 @@ plano de implementação próprio.
 - **E — Admin Filament.** Resources, relatórios, saúde de provider, gestão por
   usuário.
 
-  **Status:** a Fase E-a (catálogo — resources de Consultas e Planos) e a Fase
-  E-b (usuários/overrides, crédito manual, carteira/razão, execuções) estão
-  **concluídas**. Segue a Fase E-c (providers/relatórios).
+  **Status:** **Fase E concluída** (E-a — catálogo, resources de Consultas e
+  Planos; E-b — usuários/overrides, crédito manual, carteira/razão, execuções;
+  E-c — saúde de provider e relatórios). Só resta a Fase F.
 - **F — Frontend.** Migração/redesign do layout, telas do usuário, LGPD na tela.
 
 A ordem não é arbitrária: a carteira precisa do motor de consulta para ter o que
