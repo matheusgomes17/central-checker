@@ -176,6 +176,13 @@ Ordem de resolução na execução:
 O incremento do contador de franquia acontece no **mesmo desfecho** que o débito:
 só no `success`. `no_data` não consome franquia.
 
+**Aresta conhecida:** o uso da franquia é derivado do histórico de
+`CheckExecution` no período, contado na hora, sem lock. Duas requisições
+simultâneas perto do teto podem passar juntas e estourar a franquia em 1.
+Aceito para o MVP — é franquia incluída no plano, nunca uma cobrança errada; o
+mesmo tratamento de concorrência com `FOR UPDATE`/hold da carteira (D3) não se
+aplica aqui porque não há dinheiro em jogo.
+
 ## D5 — Gestão particular por usuário
 
 O admin gerencia caso a caso sem tocar no catálogo geral. Tabela de override
@@ -341,9 +348,9 @@ plano de implementação próprio.
   avulso), estados, overrides por usuário. **Remove Cashier/Stripe** aqui, junto
   com a assinatura pré-paga que o substitui.
 
-  **Status:** a Fase D-a (assinatura pré-paga via Pix + remoção do Cashier) está
-  **concluída**. A franquia de consultas (`plan_consultas` + contadores) e os
-  overrides por usuário seguem em D-b/D-c.
+  **Status:** a Fase D-a (assinatura pré-paga via Pix + remoção do Cashier) e a
+  Fase D-b (franquia de plano por check) estão **concluídas**. Os overrides por
+  usuário seguem em D-c.
 - **E — Admin Filament.** Resources, relatórios, saúde de provider, gestão por
   usuário.
 - **F — Frontend.** Migração/redesign do layout, telas do usuário, LGPD na tela.

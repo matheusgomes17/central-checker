@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Billing;
 
 use App\Models\PlanCheck;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Support\TenantManager;
 use Modules\CheckerApi\Enums\ProviderOutcome;
@@ -43,7 +44,10 @@ final class Franquia
             return null;
         }
 
-        $periodStart = resolve(Subscriptions::class)->active($team)?->current_period_start ?? now()->startOfMonth();
+        $active = resolve(Subscriptions::class)->active($team);
+        $periodStart = $active instanceof PlanSubscription
+            ? $active->current_period_start
+            : now()->startOfMonth();
 
         $used = resolve(TenantManager::class)->forTenant(
             $team,
