@@ -64,6 +64,23 @@ it('override bloqueado impede a execução e não toca a carteira', function ():
         ->and(WalletTransaction::query()->count())->toBe(0);
 });
 
+it('override bloqueado e concedido ao mesmo tempo bloqueia — block vence grant', function (): void {
+    [$team, $user] = setupOverrideTeam(0);
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
+    UserCheckOverride::factory()->blocked()->granted()->create([
+        'team_id' => $team->id,
+        'user_id' => $user->id,
+        'check_id' => $check->id,
+    ]);
+
+    expect(fn () => resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user))
+        ->toThrow(CheckBlockedForUserException::class);
+
+    expect(CheckExecution::query()->count())->toBe(0)
+        ->and(WalletTransaction::query()->count())->toBe(0);
+});
+
 it('override concedido executa grátis mesmo com preço não coberto pelo plano', function (): void {
     [$team, $user] = setupOverrideTeam();
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));

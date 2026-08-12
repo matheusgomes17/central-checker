@@ -74,7 +74,9 @@ class ExecutarCheck
         if ($override instanceof UserCheckOverride && $override->granted) {
             // Comp: grátis, ganha de plano/franquia/preço.
         } else {
-            $price = $override?->price_cents ?? $check->price_cents;
+            $price = $override instanceof UserCheckOverride
+                ? $override->price_cents ?? $check->price_cents
+                : $check->price_cents;
             $franquia = $this->franquia->for($team, $check);
 
             if ($franquia instanceof FranquiaStatus && $franquia->hasRemaining()) {

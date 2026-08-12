@@ -199,6 +199,11 @@ A resolução de preço/acesso consulta o override antes do catálogo. Override 
 exceção nomeada, com registro de quem concedeu — o mesmo espírito do
 `Feature::for($team)->activate()` que o Pennant já dá.
 
+**Status:** implementado (Fase D-c) via `UserCheckOverride`
+(`blocked`/`granted`/`price_cents`, precedência block > grant > preço), lido no
+`ExecutarCheck` por cima da franquia/preço do plano. A tela de gestão para o
+admin fica para a Fase E.
+
 ## D6 — Pagamentos nacionais, e o que sai do boilerplate
 
 Este é o maior desvio do que já está pronto. O boilerplate construiu billing com
@@ -351,9 +356,9 @@ plano de implementação próprio.
   avulso), estados, overrides por usuário. **Remove Cashier/Stripe** aqui, junto
   com a assinatura pré-paga que o substitui.
 
-  **Status:** a Fase D-a (assinatura pré-paga via Pix + remoção do Cashier) e a
-  Fase D-b (franquia de plano por check) estão **concluídas**. Os overrides por
-  usuário seguem em D-c.
+  **Status:** a Fase D-a (assinatura pré-paga via Pix + remoção do Cashier), a
+  Fase D-b (franquia de plano por check) e a Fase D-c (overrides por usuário,
+  D4/D5) estão **concluídas**. Seguem as Fases E e F.
 - **E — Admin Filament.** Resources, relatórios, saúde de provider, gestão por
   usuário.
 - **F — Frontend.** Migração/redesign do layout, telas do usuário, LGPD na tela.
