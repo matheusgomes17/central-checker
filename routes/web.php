@@ -13,7 +13,7 @@ Route::view('/', 'welcome')->name('home');
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function (): void {
-        Route::view('dashboard', 'dashboard')->name('dashboard');
+        Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
     });
 
 Route::middleware(['auth'])->group(function (): void {
