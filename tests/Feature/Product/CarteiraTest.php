@@ -239,6 +239,35 @@ class CarteiraTest extends TestCase
             ->assertDontSee((string) Number::currency(99, in: 'BRL', locale: 'pt_BR'));
     }
 
+    public function test_the_recharge_history_excludes_other_teams_intents(): void
+    {
+        [$user, $team] = $this->memberOf(TeamRole::Owner);
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        PaymentIntent::factory()->create([
+            'team_id' => $team->id,
+            'purpose' => PaymentPurpose::Recharge,
+            'amount_cents' => 7700,
+        ]);
+
+        // Isolamento: um intent de recarga de outro time não deve aparecer —
+        // o escopo do tenant é quem garante isso, não um filtro manual.
+        // Mesmo mecanismo de test_the_ledger_shows_the_teams_entries: time
+        // real, team_id explícito na factory.
+        $outroTime = Team::factory()->create();
+        PaymentIntent::factory()->create([
+            'team_id' => $outroTime->id,
+            'purpose' => PaymentPurpose::Recharge,
+            'amount_cents' => 8800,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.carteira')
+            ->assertSee((string) Number::currency(77, in: 'BRL', locale: 'pt_BR'))
+            ->assertDontSee((string) Number::currency(88, in: 'BRL', locale: 'pt_BR'));
+    }
+
     public function test_empty_states_show_an_invitation(): void
     {
         [$user, $team] = $this->memberOf(TeamRole::Owner);
