@@ -32,11 +32,11 @@ enum SubscriptionStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::None => __('No subscription'),
-            self::Trialing => __('Trial'),
-            self::Active => __('Active'),
-            self::Expiring => __('Expiring'),
-            self::Expired => __('Expired'),
+            self::None => 'Sem assinatura',
+            self::Trialing => 'Em teste',
+            self::Active => 'Ativa',
+            self::Expiring => 'Expirando',
+            self::Expired => 'Expirada',
         };
     }
 

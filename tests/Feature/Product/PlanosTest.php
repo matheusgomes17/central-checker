@@ -51,7 +51,7 @@ class PlanosTest extends TestCase
         Livewire::test('pages::checker.planos')
             ->assertOk()
             ->assertSee('Free')
-            ->assertSee('No subscription');
+            ->assertSee('Sem assinatura');
     }
 
     public function test_the_page_lists_purchasable_plans_with_included_checks(): void

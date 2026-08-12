@@ -50,4 +50,28 @@ class SubscriptionStatusTest extends TestCase
     {
         $this->assertFalse($status->needsAttention());
     }
+
+    /**
+     * @return array<string, array{SubscriptionStatus, string}>
+     */
+    public static function statusesAndTheirLabel(): array
+    {
+        return [
+            'none' => [SubscriptionStatus::None, 'Sem assinatura'],
+            'trialing' => [SubscriptionStatus::Trialing, 'Em teste'],
+            'active' => [SubscriptionStatus::Active, 'Ativa'],
+            'expiring' => [SubscriptionStatus::Expiring, 'Expirando'],
+            'expired' => [SubscriptionStatus::Expired, 'Expirada'],
+        ];
+    }
+
+    /**
+     * Pins the labels to pt_BR: there is no translation catalog behind
+     * these, so an English literal here would ship English on the product.
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('statusesAndTheirLabel')]
+    public function test_label_is_in_portuguese(SubscriptionStatus $status, string $expected): void
+    {
+        $this->assertSame($expected, $status->label());
+    }
 }
