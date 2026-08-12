@@ -35,6 +35,20 @@ class CircuitBreaker
         Cache::forget($this->openKey($key));
     }
 
+    /**
+     * Close the circuit by hand, on the operator's word rather than a call
+     * outcome.
+     *
+     * Same two cache keys `recordSuccess` clears — the state a provider call
+     * would have earned back on its own, granted early because an operator
+     * has reason to believe the provider is healthy again.
+     */
+    public function reset(string $key): void
+    {
+        Cache::forget($this->failuresKey($key));
+        Cache::forget($this->openKey($key));
+    }
+
     public function recordFailure(string $key): void
     {
         $current = Cache::get($this->failuresKey($key), 0);
