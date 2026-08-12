@@ -20,7 +20,7 @@ class PlanChecksTable
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => self::planName($state)),
                 TextColumn::make('check.name')
-                    ->label(__('Check'))
+                    ->label(__('Consulta'))
                     ->searchable(),
                 TextColumn::make('quota')
                     ->formatStateUsing(fn (?int $state): string => $state === null ? 'Ilimitado' : (string) $state)

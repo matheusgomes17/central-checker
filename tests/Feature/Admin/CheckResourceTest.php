@@ -79,6 +79,21 @@ class CheckResourceTest extends TestCase
             ->assertFormSet(['price_cents' => '12.34']);
     }
 
+    public function test_editing_and_saving_persists_the_price_in_centavos(): void
+    {
+        $check = Check::factory()->create(['price_cents' => 500]);
+
+        Livewire::test(EditCheck::class, ['record' => $check->getKey()])
+            ->fillForm(['price_cents' => '7.35'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('checks', [
+            'id' => $check->id,
+            'price_cents' => 735,
+        ]);
+    }
+
     public function test_provider_key_only_accepts_registered_providers(): void
     {
         Livewire::test(CreateCheck::class)

@@ -34,6 +34,10 @@ class CheckResource extends Resource
 
     protected static ?int $navigationSort = 10;
 
+    protected static ?string $modelLabel = 'consulta';
+
+    protected static ?string $pluralModelLabel = 'consultas';
+
     #[Override]
     public static function form(Schema $schema): Schema
     {

@@ -22,7 +22,7 @@ class ChecksTable
                 TextColumn::make('slug')->searchable()->toggleable(),
                 TextColumn::make('category')->badge()->toggleable(),
                 TextColumn::make('provider_key')->badge(),
-                TextColumn::make('price_cents')->label(__('Price'))->money('BRL', divideBy: 100),
+                TextColumn::make('price_cents')->label(__('Preço'))->money('BRL', divideBy: 100),
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (CheckStatus $state): string => match ($state) {
