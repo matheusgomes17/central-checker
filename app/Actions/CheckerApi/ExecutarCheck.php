@@ -7,12 +7,15 @@ namespace App\Actions\CheckerApi;
 use App\Exceptions\TenantIsMissingException;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Billing\Franquia;
+use App\Support\Billing\FranquiaStatus;
 use App\Support\TenantManager;
 use Modules\Carteira\Actions\ConfirmHold;
 use Modules\Carteira\Actions\ReleaseHold;
 use Modules\Carteira\Actions\ReserveCredit;
 use Modules\Carteira\Models\WalletHold;
 use Modules\CheckerApi\Exceptions\CheckUnavailableException;
+use Modules\CheckerApi\Exceptions\FranquiaExhaustedException;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
 use Modules\CheckerApi\Support\CheckAvailability;
@@ -42,6 +45,7 @@ class ExecutarCheck
         private readonly ReserveCredit $reserveCredit,
         private readonly ConfirmHold $confirmHold,
         private readonly ReleaseHold $releaseHold,
+        private readonly Franquia $franquia,
     ) {}
 
     public function handle(Check $check, CheckInput $input, ?User $user = null): CheckExecution
@@ -56,9 +60,19 @@ class ExecutarCheck
             throw TenantIsMissingException::forModel(CheckExecution::class);
         }
 
-        $hold = $check->price_cents > 0
-            ? $this->reserveCredit->handle($team, $check->price_cents)
-            : null;
+        $franquia = $this->franquia->for($team, $check);
+        $hold = null;
+
+        if ($franquia instanceof FranquiaStatus && $franquia->hasRemaining()) {
+            // Plano cobre e há franquia (ilimitado ou dentro do teto) — grátis sob o plano.
+        } elseif ($check->price_cents > 0) {
+            // Não coberto, ou franquia esgotada, mas há preço em crédito — cobra crédito.
+            $hold = $this->reserveCredit->handle($team, $check->price_cents);
+        } elseif ($franquia instanceof FranquiaStatus) {
+            // Coberto pelo plano, franquia esgotada, e o check não tem preço em crédito — bloqueia.
+            throw FranquiaExhaustedException::for($check);
+        }
+        // else: não coberto e preço 0 — grátis.
 
         try {
             $provider = $this->registry->resolve($check->provider_key);
