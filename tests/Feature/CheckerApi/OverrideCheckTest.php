@@ -1,0 +1,142 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Actions\CheckerApi\ExecutarCheck;
+use App\Enums\TeamRole;
+use App\Models\Team;
+use App\Models\User;
+use App\Models\UserCheckOverride;
+use App\Support\TenantManager;
+use Modules\Carteira\Actions\CreditWallet;
+use Modules\Carteira\Enums\WalletTransactionType;
+use Modules\Carteira\Models\Wallet;
+use Modules\Carteira\Models\WalletTransaction;
+use Modules\CheckerApi\Exceptions\CheckBlockedForUserException;
+use Modules\CheckerApi\Models\Check;
+use Modules\CheckerApi\Models\CheckExecution;
+use Modules\CheckerApi\Support\CheckInput;
+use Modules\CheckerApi\Support\FakeProvider;
+use Modules\CheckerApi\Support\ProviderRegistry;
+use Modules\CheckerApi\Support\ProviderResult;
+
+/**
+ * A team with a member user, wallet optionally funded. UserFactory's
+ * afterCreating switches the tenant to the user's own personal team, so the
+ * tenant is (re)set to $team only after the user exists.
+ *
+ * @return array{Team, User}
+ */
+function setupOverrideTeam(int $balance = 1000): array
+{
+    $team = Team::factory()->create();
+    $user = User::factory()->create();
+    $team->members()->attach($user);
+    $user->assignTeamRole($team, TeamRole::Member);
+    resolve(TenantManager::class)->set($team);
+
+    if ($balance > 0) {
+        resolve(CreditWallet::class)->handle($team, $balance, WalletTransactionType::Recharge, 'Fundo');
+    }
+
+    return [$team, $user];
+}
+
+function overrideInput(): CheckInput
+{
+    return CheckInput::fromArray(['cpf' => '12345678901']);
+}
+
+it('override bloqueado impede a execução e não toca a carteira', function (): void {
+    [$team, $user] = setupOverrideTeam(0);
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
+    UserCheckOverride::factory()->blocked()->create([
+        'team_id' => $team->id,
+        'user_id' => $user->id,
+        'check_id' => $check->id,
+    ]);
+
+    expect(fn () => resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user))
+        ->toThrow(CheckBlockedForUserException::class);
+
+    expect(CheckExecution::query()->count())->toBe(0)
+        ->and(WalletTransaction::query()->count())->toBe(0);
+});
+
+it('override concedido executa grátis mesmo com preço não coberto pelo plano', function (): void {
+    [$team, $user] = setupOverrideTeam();
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
+    // Nenhum PlanCheck ligando o time a este check — franquia não cobre.
+    UserCheckOverride::factory()->granted()->create([
+        'team_id' => $team->id,
+        'user_id' => $user->id,
+        'check_id' => $check->id,
+    ]);
+
+    $execution = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+
+    expect(Wallet::forTeam($team)->balance_cents)->toBe(1000)
+        ->and($execution->outcome->value)->toBe('success')
+        ->and(CheckExecution::query()->count())->toBe(1);
+});
+
+it('override com preço custom cobra o valor do override, não o do check', function (): void {
+    [$team, $user] = setupOverrideTeam();
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
+    UserCheckOverride::factory()->priced(100)->create([
+        'team_id' => $team->id,
+        'user_id' => $user->id,
+        'check_id' => $check->id,
+    ]);
+
+    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+
+    expect(Wallet::forTeam($team)->balance_cents)->toBe(900);
+});
+
+it('sem override mantém o comportamento de crédito do D-b', function (): void {
+    [$team, $user] = setupOverrideTeam();
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
+
+    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+
+    expect(Wallet::forTeam($team)->balance_cents)->toBe(650);
+});
+
+it('override de outro usuário não bloqueia este', function (): void {
+    [$team, $user] = setupOverrideTeam();
+    $otherUser = User::factory()->create();
+    resolve(TenantManager::class)->set($team);
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
+    UserCheckOverride::factory()->blocked()->create([
+        'team_id' => $team->id,
+        'user_id' => $otherUser->id,
+        'check_id' => $check->id,
+    ]);
+
+    $execution = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+
+    expect($execution->outcome->value)->toBe('success')
+        ->and(Wallet::forTeam($team)->balance_cents)->toBe(650);
+});
+
+it('sem usuário nenhum override é aplicado', function (): void {
+    [$team, $user] = setupOverrideTeam();
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
+    UserCheckOverride::factory()->blocked()->create([
+        'team_id' => $team->id,
+        'user_id' => $user->id,
+        'check_id' => $check->id,
+    ]);
+
+    $execution = resolve(ExecutarCheck::class)->handle($check, overrideInput());
+
+    expect($execution->outcome->value)->toBe('success')
+        ->and(Wallet::forTeam($team)->balance_cents)->toBe(650);
+});

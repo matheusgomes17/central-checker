@@ -7,6 +7,7 @@ namespace App\Actions\CheckerApi;
 use App\Exceptions\TenantIsMissingException;
 use App\Models\Team;
 use App\Models\User;
+use App\Models\UserCheckOverride;
 use App\Support\Billing\Franquia;
 use App\Support\Billing\FranquiaStatus;
 use App\Support\TenantManager;
@@ -14,6 +15,7 @@ use Modules\Carteira\Actions\ConfirmHold;
 use Modules\Carteira\Actions\ReleaseHold;
 use Modules\Carteira\Actions\ReserveCredit;
 use Modules\Carteira\Models\WalletHold;
+use Modules\CheckerApi\Exceptions\CheckBlockedForUserException;
 use Modules\CheckerApi\Exceptions\CheckUnavailableException;
 use Modules\CheckerApi\Exceptions\FranquiaExhaustedException;
 use Modules\CheckerApi\Models\Check;
@@ -60,19 +62,32 @@ class ExecutarCheck
             throw TenantIsMissingException::forModel(CheckExecution::class);
         }
 
-        $franquia = $this->franquia->for($team, $check);
+        // A resolução do override roda no contexto do tenant já fixado acima.
+        $override = $user instanceof User ? UserCheckOverride::for($team, $user, $check) : null;
+
+        if ($override instanceof UserCheckOverride && $override->blocked) {
+            throw CheckBlockedForUserException::for($check);
+        }
+
         $hold = null;
 
-        if ($franquia instanceof FranquiaStatus && $franquia->hasRemaining()) {
-            // Plano cobre e há franquia (ilimitado ou dentro do teto) — grátis sob o plano.
-        } elseif ($check->price_cents > 0) {
-            // Não coberto, ou franquia esgotada, mas há preço em crédito — cobra crédito.
-            $hold = $this->reserveCredit->handle($team, $check->price_cents);
-        } elseif ($franquia instanceof FranquiaStatus) {
-            // Coberto pelo plano, franquia esgotada, e o check não tem preço em crédito — bloqueia.
-            throw FranquiaExhaustedException::for($check);
+        if ($override instanceof UserCheckOverride && $override->granted) {
+            // Comp: grátis, ganha de plano/franquia/preço.
+        } else {
+            $price = $override?->price_cents ?? $check->price_cents;
+            $franquia = $this->franquia->for($team, $check);
+
+            if ($franquia instanceof FranquiaStatus && $franquia->hasRemaining()) {
+                // Plano cobre e há franquia (ilimitado ou dentro do teto) — grátis sob o plano.
+            } elseif ($price > 0) {
+                // Não coberto, ou franquia esgotada, mas há preço em crédito — cobra crédito.
+                $hold = $this->reserveCredit->handle($team, $price);
+            } elseif ($franquia instanceof FranquiaStatus) {
+                // Coberto pelo plano, franquia esgotada, e o check não tem preço em crédito — bloqueia.
+                throw FranquiaExhaustedException::for($check);
+            }
+            // else: não coberto e preço 0 — grátis.
         }
-        // else: não coberto e preço 0 — grátis.
 
         try {
             $provider = $this->registry->resolve($check->provider_key);
