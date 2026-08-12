@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Number;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Carteira\Exceptions\InsufficientBalanceException;
@@ -28,6 +29,12 @@ new #[Title('Executar consulta')] class extends Component {
 
     public string $documento = '';
 
+    /**
+     * Set only server-side, inside {@see self::executar()}, once a run
+     * succeeds. Locked so a crafted Livewire request can't swap it for a
+     * sibling team member's execution id and read their (decrypted) result.
+     */
+    #[Locked]
     public ?int $executionId = null;
 
     public function mount(): void
@@ -125,7 +132,12 @@ new #[Title('Executar consulta')] class extends Component {
             return null;
         }
 
-        return CheckExecution::query()->find($this->executionId);
+        // Escopado pelo dono, não só pelo time: o id é sequencial e
+        // previsível, então mesmo travado por #[Locked] a consulta precisa
+        // recusar sozinha a execução de um colega de time.
+        return CheckExecution::query()
+            ->where('user_id', Auth::id())
+            ->find($this->executionId);
     }
 
     /**

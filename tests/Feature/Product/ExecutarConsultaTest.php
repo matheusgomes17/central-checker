@@ -9,6 +9,7 @@ use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Carteira\Actions\CreditWallet;
 use Modules\Carteira\Enums\WalletTransactionType;
@@ -151,6 +152,61 @@ class ExecutarConsultaTest extends TestCase
             ->assertHasErrors(['checkId']);
 
         expect(CheckExecution::query()->count())->toBe(0);
+    }
+
+    /**
+     * Cross-user isolation, same team. Before Fix 1, `executionId` had no
+     * #[Locked] and its `execution()` computed only scoped by team, so a
+     * same-team sibling could set the property — an enumerable
+     * auto-increment id — to a teammate's execution and read their raw
+     * result (third-party PII) plus cost. Proven whichever
+     * mechanism still applies: Livewire refuses to update the locked
+     * property at all (the branch this test hits, since both parts of the
+     * fix are in place), or — if that guard alone were ever removed — the
+     * `user_id` scope in execution() keeps the computed from resolving to
+     * a teammate's execution.
+     */
+    public function test_a_team_member_cannot_view_a_teammates_execution_via_a_crafted_execution_id(): void
+    {
+        $team = Team::factory()->create();
+
+        $memberB = User::factory()->create();
+        $team->members()->attach($memberB);
+        $memberB->assignTeamRole($team, TeamRole::Member);
+        $memberB->switchTeam($team);
+
+        resolve(CreditWallet::class)->handle($team, 1000, WalletTransactionType::Recharge, 'Fundo');
+        resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano de Tal'])));
+        $check = Check::factory()->create(['provider_key' => 'fake']);
+
+        $this->actingAs($memberB);
+
+        Livewire::test('pages::checker.executar')
+            ->set('checkId', $check->id)
+            ->set('documento', '12345678909')
+            ->call('executar')
+            ->assertHasNoErrors();
+
+        $bExecution = CheckExecution::query()->sole();
+
+        $memberA = User::factory()->create();
+        $team->members()->attach($memberA);
+        $memberA->assignTeamRole($team, TeamRole::Member);
+        $memberA->switchTeam($team);
+
+        $this->actingAs($memberA);
+
+        try {
+            $component = Livewire::test('pages::checker.executar')
+                ->set('executionId', $bExecution->id);
+        } catch (CannotUpdateLockedPropertyException $e) {
+            expect($e->property)->toBe('executionId');
+
+            return;
+        }
+
+        $component->assertDontSee('Fulano de Tal')
+            ->assertDontSee('resultado-execucao');
     }
 
     public function test_the_page_requires_team_membership(): void

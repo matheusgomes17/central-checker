@@ -14,9 +14,9 @@
 
         <span>
             @if (is_null($daysLeft))
-                sem plano ativo
+                {{ __('sem plano ativo') }}
             @else
-                expira em {{ $daysLeft }} dias
+                {{ trans_choice('expira em :count dia|expira em :count dias', $daysLeft, ['count' => $daysLeft]) }}
             @endif
         </span>
     </div>

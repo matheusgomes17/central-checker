@@ -64,4 +64,17 @@ class FireComponentsTest extends TestCase
         $this->blade('<x-fire.plan-timer label="Plano Pro" :daysLeft="null" :fraction="0" />')
             ->assertSee('sem plano ativo');
     }
+
+    public function test_plan_timer_uses_singular_day_when_one_day_left(): void
+    {
+        $this->blade('<x-fire.plan-timer label="Plano Pro" :daysLeft="1" :fraction="0.05" />')
+            ->assertSee('expira em 1 dia')
+            ->assertDontSee('1 dias');
+    }
+
+    public function test_plan_timer_uses_plural_days_when_more_than_one_day_left(): void
+    {
+        $this->blade('<x-fire.plan-timer label="Plano Pro" :daysLeft="12" :fraction="0.4" />')
+            ->assertSee('expira em 12 dias');
+    }
 }
