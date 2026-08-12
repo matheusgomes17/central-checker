@@ -6,6 +6,7 @@ namespace Modules\CheckerApi\Models;
 
 use App\Concerns\BelongsToTenant;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -31,6 +32,8 @@ use Override;
  * @property array<string, string> $input_masked
  * @property array<string, mixed>|null $result
  * @property string|null $failure_reason
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 #[Fillable(['check_id', 'user_id', 'outcome', 'consumed_franquia', 'duration_ms', 'input_masked', 'result', 'failure_reason'])]
 class CheckExecution extends Model

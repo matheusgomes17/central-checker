@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Filament\Widgets\OperationsOverview;
 use App\Filament\Widgets\PlatformOverview;
 use App\Filament\Widgets\RevenueOverview;
 use Filament\Http\Middleware\Authenticate;
@@ -44,6 +45,7 @@ class AdminPanelProvider extends PanelProvider
                 AccountWidget::class,
                 PlatformOverview::class,
                 RevenueOverview::class,
+                OperationsOverview::class,
             ])
             ->middleware([
                 EncryptCookies::class,
