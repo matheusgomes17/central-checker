@@ -179,9 +179,12 @@ só no `success`. `no_data` não consome franquia.
 **Aresta conhecida:** o uso da franquia é derivado do histórico de
 `CheckExecution` no período, contado na hora, sem lock. Duas requisições
 simultâneas perto do teto podem passar juntas e estourar a franquia em 1.
-Aceito para o MVP — é franquia incluída no plano, nunca uma cobrança errada; o
-mesmo tratamento de concorrência com `FOR UPDATE`/hold da carteira (D3) não se
-aplica aqui porque não há dinheiro em jogo.
+Aceito para o MVP, e sempre a favor do cliente: para um check só com franquia,
+é uma execução incluída a mais; para um check com franquia **e** preço em
+crédito, é uma execução dada de graça que seria debitada — ou seja, uma
+**subcobrança limitada**, nunca uma cobrança a mais. Por isso o tratamento de
+concorrência com `FOR UPDATE`/hold da carteira (D3) não se aplica: o pior caso
+aqui não tira dinheiro de ninguém.
 
 ## D5 — Gestão particular por usuário
 
