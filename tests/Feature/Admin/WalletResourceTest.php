@@ -13,7 +13,9 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Modules\Carteira\Enums\WalletHoldStatus;
 use Modules\Carteira\Models\Wallet;
+use Modules\Carteira\Models\WalletHold;
 use Tests\TestCase;
 
 /**
@@ -78,6 +80,31 @@ class WalletResourceTest extends TestCase
             'amount_cents' => 1000,
             'description' => 'cortesia',
         ]);
+    }
+
+    /**
+     * The available-balance column must subtract active holds from the
+     * balance — not just show balance_cents back — even in this tenant-less
+     * panel context (getEloquentQuery() drops TenantScope for the admin).
+     */
+    public function test_the_available_column_subtracts_an_active_hold_from_the_balance(): void
+    {
+        $team = Team::factory()->create();
+        $wallet = Wallet::factory()->create(['team_id' => $team->id, 'balance_cents' => 10000]);
+        WalletHold::factory()->create([
+            'team_id' => $team->id,
+            'wallet_id' => $wallet->id,
+            'amount_cents' => 3000,
+            'status' => WalletHoldStatus::Active,
+        ]);
+
+        $this->assertSame(7000, $wallet->available());
+
+        // Sem o símbolo: o ICU insere espaço não separável entre a moeda e o
+        // número, que sai escapado no HTML e nunca casaria literalmente.
+        Livewire::test(ListWallets::class)
+            ->assertOk()
+            ->assertSee('70,00');
     }
 
     public function test_the_panel_stays_shut_for_an_ordinary_user(): void

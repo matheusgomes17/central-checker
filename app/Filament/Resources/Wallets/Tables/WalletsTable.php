@@ -67,6 +67,12 @@ class WalletsTable
                 $descricao = $data['descricao'] ?? null;
 
                 if (! $team instanceof Team || ! is_numeric($valor) || ! is_string($descricao)) {
+                    Notification::make()
+                        ->title(__('Não foi possível creditar'))
+                        ->body(__('Dados inválidos. Confira o valor e o motivo.'))
+                        ->danger()
+                        ->send();
+
                     return;
                 }
 

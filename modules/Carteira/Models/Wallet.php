@@ -69,9 +69,16 @@ class Wallet extends Model
      */
     public function available(): int
     {
-        $reserved = (int) $this->holds()
-            ->where('status', WalletHoldStatus::Active->value)
-            ->sum('amount_cents');
+        // holds() is already pinned to this wallet's own id, so the extra
+        // team_id check from WalletHold's TenantScope is redundant — and, in
+        // a context with no ambient tenant (the operator panel), that scope
+        // fails closed and silently drops every hold from the sum. Suspending
+        // it here keeps available() correct regardless of who is asking.
+        $reserved = self::withoutTenancy(
+            fn (): int => (int) $this->holds()
+                ->where('status', WalletHoldStatus::Active->value)
+                ->sum('amount_cents'),
+        );
 
         return $this->balance_cents - $reserved;
     }
