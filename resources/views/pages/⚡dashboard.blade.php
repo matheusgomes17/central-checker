@@ -140,6 +140,15 @@ new #[Title('Dashboard')] class extends Component {
                 </flux:button>
 
                 <flux:button
+                    :href="route('checker.planos', $this->team())"
+                    icon="rectangle-stack"
+                    wire:navigate
+                    data-test="dashboard-planos"
+                >
+                    {{ __('Planos') }}
+                </flux:button>
+
+                <flux:button
                     :href="route('checker.executar', $this->team())"
                     variant="primary"
                     icon="bolt"

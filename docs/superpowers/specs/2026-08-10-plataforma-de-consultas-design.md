@@ -335,7 +335,9 @@ de qualquer variante Pro). Telas:
 - **Carteira / Recarga** — saldo, gerar Pix (QR + copia-e-cola), histórico do
   razão. **✅ Entregue (Fase F-2).**
 - **Planos** — agora **self-service** via VirtualPay (o legado mandava falar no
-  Telegram). **Pendente (Fase F-3).**
+  Telegram): comparar planos e assinar/renovar via Pix, cada card mostrando as
+  consultas incluídas/franquia do plano (diferencial B2C). **✅ Entregue (Fase
+  F-3).**
 - **Perfil** e **Histórico** de consultas. **Pendente (Fase F-4).**
 
 A Fase F-1 também estabeleceu a base do sistema visual "fogo" (tema Flux/Tailwind
@@ -403,8 +405,10 @@ plano de implementação próprio.
   plano, tela de executar consulta com formulário validado/resultado/custo/
   estado de manutenção, e a base do sistema visual "fogo"). **Fase F-2
   concluída** (tela de carteira/recarga — saldo, Pix com QR e copia-e-cola,
-  razão e histórico de recargas — mais o link de navegação até ela). Seguem
-  as Fases F-3 (planos self-service) e F-4 (perfil/histórico).
+  razão e histórico de recargas — mais o link de navegação até ela). **Fase
+  F-3 concluída** (planos self-service — comparar e assinar/renovar via Pix,
+  franquia por plano visível — mais o link de navegação até ela). Segue a
+  Fase F-4 (perfil/histórico).
 
 A ordem não é arbitrária: a carteira precisa do motor de consulta para ter o que
 cobrar; o pagamento precisa da carteira para ter o que creditar; o plano precisa
