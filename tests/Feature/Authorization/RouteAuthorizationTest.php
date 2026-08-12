@@ -70,6 +70,7 @@ class RouteAuthorizationTest extends TestCase
         // Agem sobre quem está autenticado: o recurso é a própria pessoa, e não
         // existe identificador de outra para autorizar contra.
         'dashboard' => 'o escopo de time vem do middleware de membership',
+        'checker.executar' => 'o escopo de time vem do middleware de membership',
         'profile.edit' => 'edita a própria conta',
         'security.edit' => 'edita a própria segurança',
         'appearance.edit' => 'preferência da própria conta',

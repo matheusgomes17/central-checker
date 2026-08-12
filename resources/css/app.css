@@ -59,6 +59,31 @@
         radial-gradient(560px circle at 102% 22%, rgb(204 51 0 / 12%), transparent 55%);
 }
 
+/* "Acende" o card de resultado da tela de executar consulta: um pulso curto
+   de brilho laranja quando o resultado chega. Só a versão `motion-safe:` é
+   usada nas telas — quem pede menos movimento vê o card pronto, sem o pulso. */
+@keyframes ignite {
+    0% {
+        opacity: 0;
+        transform: scale(0.97);
+        box-shadow: 0 0 0 0 rgb(255 107 0 / 0%);
+    }
+
+    45% {
+        opacity: 1;
+        box-shadow: 0 0 40px 6px rgb(255 107 0 / 35%);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgb(255 107 0 / 0%);
+    }
+}
+
+@utility animate-ignite {
+    animation: ignite 700ms ease-out;
+}
+
 @layer base {
 
     *,

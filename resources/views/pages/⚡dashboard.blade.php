@@ -129,23 +129,15 @@ new #[Title('Dashboard')] class extends Component {
                 <h1 class="font-display text-2xl font-semibold text-white">{{ __('Como o time está usando o checker') }}</h1>
             </div>
 
-            @if (Route::has('checker.executar'))
-                <flux:button
-                    :href="route('checker.executar', $this->team())"
-                    variant="primary"
-                    icon="bolt"
-                    wire:navigate
-                    data-test="dashboard-executar-consulta"
-                >
-                    {{ __('Executar consulta') }}
-                </flux:button>
-            @else
-                {{-- TODO(Task 3): a tela de execução ainda não existe. Troca para
-                     :href="route('checker.executar', $this->team())" quando ela nascer. --}}
-                <flux:button variant="primary" icon="bolt" disabled data-test="dashboard-executar-consulta">
-                    {{ __('Executar consulta') }}
-                </flux:button>
-            @endif
+            <flux:button
+                :href="route('checker.executar', $this->team())"
+                variant="primary"
+                icon="bolt"
+                wire:navigate
+                data-test="dashboard-executar-consulta"
+            >
+                {{ __('Executar consulta') }}
+            </flux:button>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-3">
