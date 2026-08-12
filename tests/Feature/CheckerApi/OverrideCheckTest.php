@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 use App\Actions\CheckerApi\ExecutarCheck;
 use App\Enums\TeamRole;
+use App\Models\PlanCheck;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserCheckOverride;
+use App\Support\Billing\Franquia;
 use App\Support\TenantManager;
 use Modules\Carteira\Actions\CreditWallet;
 use Modules\Carteira\Enums\WalletTransactionType;
@@ -156,4 +159,68 @@ it('sem usuário nenhum override é aplicado', function (): void {
 
     expect($execution->outcome->value)->toBe('success')
         ->and(Wallet::forTeam($team)->balance_cents)->toBe(650);
+});
+
+it('override concedido (comp) não consome a franquia compartilhada do time', function (): void {
+    [$team, $userA] = setupOverrideTeam();
+    PlanSubscription::factory()->active()->create(['team_id' => $team->id, 'plan' => 'pro']);
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->create(['provider_key' => 'fake']);
+    PlanCheck::factory()->create(['plan' => 'pro', 'check_id' => $check->id, 'quota' => 2]);
+    UserCheckOverride::factory()->granted()->create([
+        'team_id' => $team->id,
+        'user_id' => $userA->id,
+        'check_id' => $check->id,
+    ]);
+
+    $userB = User::factory()->create();
+    $team->members()->attach($userB);
+    $userB->assignTeamRole($team, TeamRole::Member);
+    resolve(TenantManager::class)->set($team);
+
+    // Usuário A tem grant: roda 3x, mais do que a quota do time (2), grátis.
+    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userA);
+    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userA);
+    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userA);
+
+    $status = resolve(Franquia::class)->for($team, $check);
+    expect($status->used)->toBe(0)
+        ->and($status->hasRemaining())->toBeTrue();
+
+    // Usuário B, sem override, ainda executa grátis dentro da franquia do plano.
+    $executionB = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userB);
+
+    expect($executionB->outcome->value)->toBe('success')
+        ->and($executionB->consumed_franquia)->toBeTrue()
+        ->and(resolve(Franquia::class)->for($team, $check)->used)->toBe(1);
+});
+
+it('execução sob franquia do plano incrementa o used', function (): void {
+    [$team, $user] = setupOverrideTeam();
+    PlanSubscription::factory()->active()->create(['team_id' => $team->id, 'plan' => 'pro']);
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->create(['provider_key' => 'fake']);
+    PlanCheck::factory()->create(['plan' => 'pro', 'check_id' => $check->id, 'quota' => 2]);
+
+    $execution = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+
+    expect($execution->consumed_franquia)->toBeTrue()
+        ->and(resolve(Franquia::class)->for($team, $check)->used)->toBe(1);
+});
+
+it('cobrança em crédito após franquia esgotada não consome mais franquia', function (): void {
+    [$team, $user] = setupOverrideTeam();
+    PlanSubscription::factory()->active()->create(['team_id' => $team->id, 'plan' => 'pro']);
+    resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
+    PlanCheck::factory()->create(['plan' => 'pro', 'check_id' => $check->id, 'quota' => 1]);
+
+    // Primeira: dentro da franquia, grátis, used vai a 1 (o teto).
+    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+    // Segunda: franquia esgotada, cai para crédito.
+    $creditExecution = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+
+    expect($creditExecution->consumed_franquia)->toBeFalse()
+        ->and(Wallet::forTeam($team)->balance_cents)->toBe(650)
+        ->and(resolve(Franquia::class)->for($team, $check)->used)->toBe(1);
 });

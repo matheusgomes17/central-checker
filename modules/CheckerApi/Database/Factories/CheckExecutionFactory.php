@@ -28,6 +28,7 @@ class CheckExecutionFactory extends Factory
             'check_id' => Check::factory(),
             'user_id' => null,
             'outcome' => ProviderOutcome::Success,
+            'consumed_franquia' => false,
             'duration_ms' => $this->faker->numberBetween(50, 2000),
             'input_masked' => ['cpf' => '123******01'],
             'result' => ['nome' => 'Fulano'],

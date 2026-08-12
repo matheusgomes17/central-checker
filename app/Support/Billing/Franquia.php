@@ -24,6 +24,11 @@ use Modules\CheckerApi\Models\CheckExecution;
  * to backfill a counter that did not exist yet. Only the `Success` outcome
  * consumes franquia: `NoData` is a legitimate answer and `Failed` feeds the
  * circuit breaker, neither is a use of the check the team should pay for.
+ *
+ * Success alone is not enough, though: `used` also requires
+ * `consumed_franquia`, set per execution by `ExecutarCheck` only on the
+ * franquia-free branch. A granted (comp) override or a credit charge is
+ * outside the plan by design and must not eat into it.
  */
 final class Franquia
 {
@@ -54,6 +59,7 @@ final class Franquia
             fn (): int => CheckExecution::query()
                 ->where('check_id', $check->getKey())
                 ->where('outcome', ProviderOutcome::Success->value)
+                ->where('consumed_franquia', true)
                 ->where('created_at', '>=', $periodStart)
                 ->count(),
         );

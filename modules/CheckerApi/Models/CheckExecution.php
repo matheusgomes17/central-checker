@@ -24,12 +24,13 @@ use Override;
  * @property int $check_id
  * @property int|null $user_id
  * @property ProviderOutcome $outcome
+ * @property bool $consumed_franquia
  * @property int $duration_ms
  * @property array<string, string> $input_masked
  * @property array<string, mixed>|null $result
  * @property string|null $failure_reason
  */
-#[Fillable(['check_id', 'user_id', 'outcome', 'duration_ms', 'input_masked', 'result', 'failure_reason'])]
+#[Fillable(['check_id', 'user_id', 'outcome', 'consumed_franquia', 'duration_ms', 'input_masked', 'result', 'failure_reason'])]
 class CheckExecution extends Model
 {
     /** @use HasFactory<CheckExecutionFactory> */
@@ -43,6 +44,7 @@ class CheckExecution extends Model
     {
         return [
             'outcome' => ProviderOutcome::class,
+            'consumed_franquia' => 'boolean',
             'input_masked' => 'array',
             'result' => 'encrypted:array',
         ];

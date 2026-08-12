@@ -70,9 +70,10 @@ class ExecutarCheck
         }
 
         $hold = null;
+        $consumesFranquia = false;
 
         if ($override instanceof UserCheckOverride && $override->granted) {
-            // Comp: grátis, ganha de plano/franquia/preço.
+            // Comp: grátis, ganha de plano/franquia/preço — não consome a franquia do plano.
         } else {
             $price = $override instanceof UserCheckOverride
                 ? $override->price_cents ?? $check->price_cents
@@ -81,6 +82,7 @@ class ExecutarCheck
 
             if ($franquia instanceof FranquiaStatus && $franquia->hasRemaining()) {
                 // Plano cobre e há franquia (ilimitado ou dentro do teto) — grátis sob o plano.
+                $consumesFranquia = true;
             } elseif ($price > 0) {
                 // Não coberto, ou franquia esgotada, mas há preço em crédito — cobra crédito.
                 $hold = $this->reserveCredit->handle($team, $price);
@@ -103,6 +105,7 @@ class ExecutarCheck
                 'check_id' => $check->id,
                 'user_id' => $user?->id,
                 'outcome' => $result->outcome(),
+                'consumed_franquia' => $consumesFranquia,
                 'duration_ms' => $durationMs,
                 'input_masked' => $input->masked(),
                 'result' => $result->isSuccess() ? $result->data() : null,

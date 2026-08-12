@@ -37,6 +37,7 @@ class FranquiaTest extends TestCase
             'team_id' => $team->id,
             'check_id' => $check->id,
             'outcome' => ProviderOutcome::Success,
+            'consumed_franquia' => true,
         ]);
 
         $status = resolve(Franquia::class)->for($team, $check);
@@ -60,6 +61,7 @@ class FranquiaTest extends TestCase
             'team_id' => $team->id,
             'check_id' => $check->id,
             'outcome' => ProviderOutcome::Success,
+            'consumed_franquia' => true,
         ]);
 
         $status = resolve(Franquia::class)->for($team, $check);
@@ -94,6 +96,7 @@ class FranquiaTest extends TestCase
             'team_id' => $team->id,
             'check_id' => $check->id,
             'outcome' => ProviderOutcome::Success,
+            'consumed_franquia' => true,
         ]);
         CheckExecution::factory()->create([
             'team_id' => $team->id,
@@ -129,6 +132,7 @@ class FranquiaTest extends TestCase
             'team_id' => $team->id,
             'check_id' => $check->id,
             'outcome' => ProviderOutcome::Success,
+            'consumed_franquia' => true,
         ]);
         $before->forceFill(['created_at' => $subscription->current_period_start->clone()->subDay()])->save();
 
@@ -136,6 +140,7 @@ class FranquiaTest extends TestCase
             'team_id' => $team->id,
             'check_id' => $check->id,
             'outcome' => ProviderOutcome::Success,
+            'consumed_franquia' => true,
         ]);
 
         $status = resolve(Franquia::class)->for($team, $check);
@@ -160,6 +165,7 @@ class FranquiaTest extends TestCase
             'team_id' => $team->id,
             'check_id' => $check->id,
             'outcome' => ProviderOutcome::Success,
+            'consumed_franquia' => true,
         ]);
         $lastMonth->forceFill(['created_at' => now()->subMonth()])->save();
 
@@ -167,6 +173,7 @@ class FranquiaTest extends TestCase
             'team_id' => $team->id,
             'check_id' => $check->id,
             'outcome' => ProviderOutcome::Success,
+            'consumed_franquia' => true,
         ]);
 
         $status = resolve(Franquia::class)->for($team, $check);

@@ -204,6 +204,15 @@ exceção nomeada, com registro de quem concedeu — o mesmo espírito do
 `ExecutarCheck` por cima da franquia/preço do plano. A tela de gestão para o
 admin fica para a Fase E.
 
+Um grant (comp) é **fora** do plano por definição: não pode esgotar a
+franquia compartilhada que os outros usuários do time dependem. Correção de
+revisão final da Fase D-c: `CheckExecution.consumed_franquia` marca, por
+execução, se ELA consumiu a franquia do plano — `true` só no ramo "franquia
+livre" do `ExecutarCheck`, `false` para grant, crédito e execução não
+coberta/grátis. `Franquia::used` filtra por `outcome=success` **e**
+`consumed_franquia=true`, então um grant ou uma cobrança em crédito nunca
+inflam o `used` de ninguém.
+
 ## D6 — Pagamentos nacionais, e o que sai do boilerplate
 
 Este é o maior desvio do que já está pronto. O boilerplate construiu billing com
