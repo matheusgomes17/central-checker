@@ -73,6 +73,7 @@ class RouteAuthorizationTest extends TestCase
         'checker.executar' => 'o escopo de time vem do middleware de membership',
         'checker.carteira' => 'o escopo de time vem do middleware de membership; recarregar() exige ManageBilling',
         'checker.planos' => 'o escopo de time vem do middleware de membership; assinar() exige ManageBilling',
+        'checker.historico' => 'o escopo de time vem do middleware de membership; execucoes() e selected() filtram por user_id',
         'profile.edit' => 'edita a própria conta',
         'security.edit' => 'edita a própria segurança',
         'appearance.edit' => 'preferência da própria conta',
