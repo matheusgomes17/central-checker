@@ -8,6 +8,7 @@ use App\Models\PlanCheck;
 use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Support\Billing\Franquia;
+use App\Support\Billing\Plan;
 use App\Support\TenantManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\CheckerApi\Enums\ProviderOutcome;
@@ -130,6 +131,37 @@ class FranquiaTest extends TestCase
             'outcome' => ProviderOutcome::Success,
         ]);
         $before->forceFill(['created_at' => $subscription->current_period_start->clone()->subDay()])->save();
+
+        CheckExecution::factory()->create([
+            'team_id' => $team->id,
+            'check_id' => $check->id,
+            'outcome' => ProviderOutcome::Success,
+        ]);
+
+        $status = resolve(Franquia::class)->for($team, $check);
+
+        $this->assertNotNull($status);
+        $this->assertSame(1, $status->used);
+    }
+
+    /**
+     * A team with no active subscription has no `current_period_start` to
+     * anchor on, so the period falls back to the calendar month.
+     */
+    public function test_a_team_without_a_subscription_uses_the_calendar_month_as_the_period(): void
+    {
+        $team = Team::factory()->create();
+        $check = Check::factory()->create();
+        PlanCheck::factory()->create(['plan' => Plan::default()->key, 'check_id' => $check->id, 'quota' => 5]);
+
+        resolve(TenantManager::class)->set($team);
+
+        $lastMonth = CheckExecution::factory()->create([
+            'team_id' => $team->id,
+            'check_id' => $check->id,
+            'outcome' => ProviderOutcome::Success,
+        ]);
+        $lastMonth->forceFill(['created_at' => now()->subMonth()])->save();
 
         CheckExecution::factory()->create([
             'team_id' => $team->id,
