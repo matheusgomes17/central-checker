@@ -50,6 +50,19 @@ new #[Title('Planos')] class extends Component {
     }
 
     /**
+     * `confirming` isn't #[Locked] — the "Cancelar" button needs a client
+     * `$set('confirming', null)` — so a tampered request can set it to a key
+     * outside Plan::purchasable(). Drop it back to null right away instead
+     * of letting a stale/invalid key linger for the view to index.
+     */
+    public function updatedConfirming(): void
+    {
+        if ($this->confirming !== null && ! array_key_exists($this->confirming, $this->planos())) {
+            $this->confirming = null;
+        }
+    }
+
+    /**
      * Opens a Pix charge for the plan, asking first when the plan is smaller
      * than what the team is already using.
      *
@@ -268,17 +281,18 @@ new #[Title('Planos')] class extends Component {
                 @endforeach
             </div>
 
-            @if ($this->confirming)
+            @php($planoConfirmando = $this->confirming !== null ? ($this->planos[$this->confirming] ?? null) : null)
+            @if ($planoConfirmando)
                 <flux:callout variant="warning" icon="exclamation-triangle" data-test="downgrade-confirm">
                     <flux:callout.heading>{{ __('Este plano é menor que o uso atual') }}</flux:callout.heading>
                     <flux:callout.text>
                         {{ __(':usados de :limite membros em uso. Ninguém é removido, e ninguém novo entra até que vagas sejam liberadas.', [
                             'usados' => $this->billing->usage('members')['used'],
-                            'limite' => $this->planos[$this->confirming]->limit('members'),
+                            'limite' => $planoConfirmando->limit('members'),
                         ]) }}
                     </flux:callout.text>
                     <x-slot name="actions">
-                        <flux:button wire:click="assinar('{{ $this->confirming }}')" variant="danger" size="sm" data-test="downgrade-confirm-button">
+                        <flux:button wire:click="assinar('{{ $planoConfirmando->key }}')" variant="danger" size="sm" data-test="downgrade-confirm-button">
                             {{ __('Trocar mesmo assim') }}
                         </flux:button>
                         <flux:button wire:click="$set('confirming', null)" variant="ghost" size="sm">{{ __('Cancelar') }}</flux:button>

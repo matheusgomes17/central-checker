@@ -172,6 +172,26 @@ class PlanosTest extends TestCase
         expect(PaymentIntent::acrossTenants()->count())->toBe(0);
     }
 
+    /**
+     * `confirming` is a plain public property (not #[Locked], because the
+     * "Cancelar" button needs `$set('confirming', null)` from the client),
+     * so a tampered Livewire request can set it to a key that isn't in
+     * Plan::purchasable(). The view must not crash indexing that away —
+     * assinar() already re-validates, but the render path has to guard too.
+     */
+    public function test_setting_an_invalid_confirming_key_does_not_crash_the_page(): void
+    {
+        [$user, $team] = $this->memberOf(TeamRole::Owner);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.planos')
+            ->set('confirming', 'inexistente')
+            ->assertOk()
+            ->assertSee('Free')
+            ->assertDontSee('Este plano é menor que o uso atual');
+    }
+
     public function test_the_page_requires_team_membership(): void
     {
         $user = User::factory()->create();
