@@ -20,7 +20,7 @@ return [
     'enabled' => [
         'Pagamentos',
         'Carteira',
-        'Consultas',
+        'CheckerApi',
         //
     ],
 

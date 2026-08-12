@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\Consultas;
+namespace App\Actions\CheckerApi;
 
 use App\Exceptions\TenantIsMissingException;
 use App\Models\Team;
@@ -12,18 +12,18 @@ use Modules\Carteira\Actions\ConfirmHold;
 use Modules\Carteira\Actions\ReleaseHold;
 use Modules\Carteira\Actions\ReserveCredit;
 use Modules\Carteira\Models\WalletHold;
-use Modules\Consultas\Exceptions\ConsultaUnavailableException;
-use Modules\Consultas\Models\Consulta;
-use Modules\Consultas\Models\ConsultaExecution;
-use Modules\Consultas\Support\CircuitBreaker;
-use Modules\Consultas\Support\ConsultaAvailability;
-use Modules\Consultas\Support\ConsultaInput;
-use Modules\Consultas\Support\ProviderRegistry;
-use Modules\Consultas\Support\ResilientProvider;
+use Modules\CheckerApi\Exceptions\CheckUnavailableException;
+use Modules\CheckerApi\Models\Check;
+use Modules\CheckerApi\Models\CheckExecution;
+use Modules\CheckerApi\Support\CheckAvailability;
+use Modules\CheckerApi\Support\CheckInput;
+use Modules\CheckerApi\Support\CircuitBreaker;
+use Modules\CheckerApi\Support\ProviderRegistry;
+use Modules\CheckerApi\Support\ResilientProvider;
 use Throwable;
 
 /**
- * Runs one consulta, charges for it only when it returns useful data, and
+ * Runs one check, charges for it only when it returns useful data, and
  * records the outcome.
  *
  * The order is the point: reserve first, so an execution that cannot be paid
@@ -32,11 +32,11 @@ use Throwable;
  * the money across the slow provider call so two runs cannot spend the same
  * balance.
  */
-class ExecutarConsulta
+class ExecutarCheck
 {
     public function __construct(
         private readonly ProviderRegistry $registry,
-        private readonly ConsultaAvailability $availability,
+        private readonly CheckAvailability $availability,
         private readonly CircuitBreaker $breaker,
         private readonly TenantManager $tenants,
         private readonly ReserveCredit $reserveCredit,
@@ -44,32 +44,32 @@ class ExecutarConsulta
         private readonly ReleaseHold $releaseHold,
     ) {}
 
-    public function handle(Consulta $consulta, ConsultaInput $input, ?User $user = null): ConsultaExecution
+    public function handle(Check $check, CheckInput $input, ?User $user = null): CheckExecution
     {
-        if (! $this->availability->available($consulta)) {
-            throw ConsultaUnavailableException::for($consulta);
+        if (! $this->availability->available($check)) {
+            throw CheckUnavailableException::for($check);
         }
 
         $team = $this->tenants->current();
 
         if (! $team instanceof Team) {
-            throw TenantIsMissingException::forModel(ConsultaExecution::class);
+            throw TenantIsMissingException::forModel(CheckExecution::class);
         }
 
-        $hold = $consulta->price_cents > 0
-            ? $this->reserveCredit->handle($team, $consulta->price_cents)
+        $hold = $check->price_cents > 0
+            ? $this->reserveCredit->handle($team, $check->price_cents)
             : null;
 
         try {
-            $provider = $this->registry->resolve($consulta->provider_key);
+            $provider = $this->registry->resolve($check->provider_key);
             $resilient = new ResilientProvider($provider, $this->breaker);
 
             $startedAt = hrtime(true);
             $result = $resilient->execute($input);
             $durationMs = (int) ((hrtime(true) - $startedAt) / 1_000_000);
 
-            $execution = ConsultaExecution::create([
-                'consulta_id' => $consulta->id,
+            $execution = CheckExecution::create([
+                'check_id' => $check->id,
                 'user_id' => $user?->id,
                 'outcome' => $result->outcome(),
                 'duration_ms' => $durationMs,
@@ -78,7 +78,7 @@ class ExecutarConsulta
                 'failure_reason' => $result->reason(),
             ]);
 
-            $this->settle($hold, $result->isSuccess(), $consulta, $execution);
+            $this->settle($hold, $result->isSuccess(), $check, $execution);
 
             return $execution;
         } catch (Throwable $e) {
@@ -88,14 +88,14 @@ class ExecutarConsulta
         }
     }
 
-    private function settle(?WalletHold $hold, bool $success, Consulta $consulta, ConsultaExecution $execution): void
+    private function settle(?WalletHold $hold, bool $success, Check $check, CheckExecution $execution): void
     {
         if (! $hold instanceof WalletHold) {
             return;
         }
 
         if ($success) {
-            $this->confirmHold->handle($hold, "Consulta: {$consulta->slug}", $execution);
+            $this->confirmHold->handle($hold, "Check: {$check->slug}", $execution);
 
             return;
         }

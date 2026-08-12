@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Actions\Consultas\ExecutarConsulta;
+use App\Actions\CheckerApi\ExecutarCheck;
 use App\Models\Team;
 use App\Support\TenantManager;
 use Modules\Carteira\Actions\CreditWallet;
@@ -12,12 +12,12 @@ use Modules\Carteira\Exceptions\InsufficientBalanceException;
 use Modules\Carteira\Models\Wallet;
 use Modules\Carteira\Models\WalletHold;
 use Modules\Carteira\Models\WalletTransaction;
-use Modules\Consultas\Models\Consulta;
-use Modules\Consultas\Models\ConsultaExecution;
-use Modules\Consultas\Support\ConsultaInput;
-use Modules\Consultas\Support\FakeProvider;
-use Modules\Consultas\Support\ProviderRegistry;
-use Modules\Consultas\Support\ProviderResult;
+use Modules\CheckerApi\Models\Check;
+use Modules\CheckerApi\Models\CheckExecution;
+use Modules\CheckerApi\Support\CheckInput;
+use Modules\CheckerApi\Support\FakeProvider;
+use Modules\CheckerApi\Support\ProviderRegistry;
+use Modules\CheckerApi\Support\ProviderResult;
 
 function setupTeam(int $balance): Team
 {
@@ -33,17 +33,17 @@ function setupTeam(int $balance): Team
     return $team;
 }
 
-function cobrancaInput(): ConsultaInput
+function cobrancaInput(): CheckInput
 {
-    return ConsultaInput::fromArray(['cpf' => '12345678901']);
+    return CheckInput::fromArray(['cpf' => '12345678901']);
 }
 
 it('sucesso debita o preço e liga a cobrança à execução', function (): void {
     $team = setupTeam(1000);
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
-    $consulta = Consulta::factory()->priced(350)->create(['provider_key' => 'fake']);
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarConsulta::class)->handle($consulta, cobrancaInput());
+    $execution = resolve(ExecutarCheck::class)->handle($check, cobrancaInput());
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(650)
         ->and(WalletHold::query()->where('status', WalletHoldStatus::Settled->value)->count())->toBe(1);
@@ -56,9 +56,9 @@ it('sucesso debita o preço e liga a cobrança à execução', function (): void
 it('nada encontrado não cobra e solta o hold', function (): void {
     $team = setupTeam(1000);
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::noData()));
-    $consulta = Consulta::factory()->priced(350)->create(['provider_key' => 'fake']);
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
 
-    resolve(ExecutarConsulta::class)->handle($consulta, cobrancaInput());
+    resolve(ExecutarCheck::class)->handle($check, cobrancaInput());
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(1000)
         ->and(Wallet::forTeam($team)->available())->toBe(1000)
@@ -68,9 +68,9 @@ it('nada encontrado não cobra e solta o hold', function (): void {
 it('falha técnica não cobra e solta o hold', function (): void {
     $team = setupTeam(1000);
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::failed('timeout')));
-    $consulta = Consulta::factory()->priced(350)->create(['provider_key' => 'fake']);
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
 
-    resolve(ExecutarConsulta::class)->handle($consulta, cobrancaInput());
+    resolve(ExecutarCheck::class)->handle($check, cobrancaInput());
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(1000)
         ->and(Wallet::forTeam($team)->available())->toBe(1000);
@@ -80,21 +80,21 @@ it('saldo insuficiente recusa antes de executar e não registra execução', fun
     $team = setupTeam(100); // menos que o preço
     $provider = FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano']));
     resolve(ProviderRegistry::class)->register($provider);
-    $consulta = Consulta::factory()->priced(350)->create(['provider_key' => 'fake']);
+    $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
 
-    expect(fn () => resolve(ExecutarConsulta::class)->handle($consulta, cobrancaInput()))
+    expect(fn () => resolve(ExecutarCheck::class)->handle($check, cobrancaInput()))
         ->toThrow(InsufficientBalanceException::class);
 
-    expect(ConsultaExecution::query()->count())->toBe(0)
+    expect(CheckExecution::query()->count())->toBe(0)
         ->and($provider->calls())->toBe(0);
 });
 
-it('consulta de preço zero não toca a carteira', function (): void {
+it('check de preço zero não toca a carteira', function (): void {
     $team = setupTeam(0);
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
-    $consulta = Consulta::factory()->priced(0)->create(['provider_key' => 'fake']);
+    $check = Check::factory()->priced(0)->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarConsulta::class)->handle($consulta, cobrancaInput());
+    $execution = resolve(ExecutarCheck::class)->handle($check, cobrancaInput());
 
     expect($execution->outcome->value)->toBe('success')
         ->and(WalletTransaction::query()->count())->toBe(0)

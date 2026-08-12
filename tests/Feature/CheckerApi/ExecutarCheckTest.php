@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-use App\Actions\Consultas\ExecutarConsulta;
+use App\Actions\CheckerApi\ExecutarCheck;
 use App\Models\Team;
 use App\Support\TenantManager;
-use Modules\Consultas\Enums\ProviderOutcome;
-use Modules\Consultas\Exceptions\ConsultaUnavailableException;
-use Modules\Consultas\Models\Consulta;
-use Modules\Consultas\Support\ConsultaInput;
-use Modules\Consultas\Support\FakeProvider;
-use Modules\Consultas\Support\ProviderRegistry;
-use Modules\Consultas\Support\ProviderResult;
+use Modules\CheckerApi\Enums\ProviderOutcome;
+use Modules\CheckerApi\Exceptions\CheckUnavailableException;
+use Modules\CheckerApi\Models\Check;
+use Modules\CheckerApi\Support\CheckInput;
+use Modules\CheckerApi\Support\FakeProvider;
+use Modules\CheckerApi\Support\ProviderRegistry;
+use Modules\CheckerApi\Support\ProviderResult;
 
-function runInput(): ConsultaInput
+function runInput(): CheckInput
 {
-    return ConsultaInput::fromArray(['cpf' => '12345678901']);
+    return CheckInput::fromArray(['cpf' => '12345678901']);
 }
 
 it('grava execução de sucesso com o resultado', function (): void {
@@ -24,9 +24,9 @@ it('grava execução de sucesso com o resultado', function (): void {
     $registry = resolve(ProviderRegistry::class);
 
     $registry->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
-    $consulta = Consulta::factory()->create(['provider_key' => 'fake']);
+    $check = Check::factory()->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarConsulta::class)->handle($consulta, runInput());
+    $execution = resolve(ExecutarCheck::class)->handle($check, runInput());
 
     expect($execution->outcome)->toBe(ProviderOutcome::Success)
         ->and($execution->result)->toBe(['nome' => 'Fulano'])
@@ -41,9 +41,9 @@ it('grava nada encontrado sem resultado', function (): void {
     $registry = resolve(ProviderRegistry::class);
 
     $registry->register(FakeProvider::returning(ProviderResult::noData()));
-    $consulta = Consulta::factory()->create(['provider_key' => 'fake']);
+    $check = Check::factory()->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarConsulta::class)->handle($consulta, runInput());
+    $execution = resolve(ExecutarCheck::class)->handle($check, runInput());
 
     expect($execution->outcome)->toBe(ProviderOutcome::NoData)
         ->and($execution->result)->toBeNull();
@@ -55,22 +55,22 @@ it('grava falha com o motivo', function (): void {
     $registry = resolve(ProviderRegistry::class);
 
     $registry->register(FakeProvider::returning(ProviderResult::failed('timeout')));
-    $consulta = Consulta::factory()->create(['provider_key' => 'fake']);
+    $check = Check::factory()->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarConsulta::class)->handle($consulta, runInput());
+    $execution = resolve(ExecutarCheck::class)->handle($check, runInput());
 
     expect($execution->outcome)->toBe(ProviderOutcome::Failed)
         ->and($execution->failure_reason)->toBe('timeout')
         ->and($execution->result)->toBeNull();
 });
 
-it('recusa executar consulta em manutenção', function (): void {
+it('recusa executar check em manutenção', function (): void {
     $team = Team::factory()->create();
     resolve(TenantManager::class)->set($team);
     $registry = resolve(ProviderRegistry::class);
 
     $registry->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
-    $consulta = Consulta::factory()->inMaintenance()->create(['provider_key' => 'fake']);
+    $check = Check::factory()->inMaintenance()->create(['provider_key' => 'fake']);
 
-    resolve(ExecutarConsulta::class)->handle($consulta, runInput());
-})->throws(ConsultaUnavailableException::class);
+    resolve(ExecutarCheck::class)->handle($check, runInput());
+})->throws(CheckUnavailableException::class);
