@@ -107,6 +107,40 @@ class UserCheckOverrideResourceTest extends TestCase
             ->assertFormSet(['price_cents' => '2.50']);
     }
 
+    public function test_an_empty_price_persists_as_null_not_zero(): void
+    {
+        // 0 tem significado próprio no caminho de crédito (grátis); um
+        // price_cents vazio precisa virar SQL NULL, não 0.
+        $team = Team::factory()->create();
+        $user = User::factory()->create();
+        $check = Check::factory()->create();
+
+        Livewire::test(CreateUserCheckOverride::class)
+            ->fillForm([
+                'team_id' => $team->id,
+                'user_id' => $user->id,
+                'check_id' => $check->id,
+                'price_cents' => '',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $override = UserCheckOverride::acrossTenants()
+            ->where('team_id', $team->id)
+            ->where('user_id', $user->id)
+            ->where('check_id', $check->id)
+            ->firstOrFail();
+
+        $this->assertNull($override->price_cents);
+
+        $this->assertDatabaseHas('user_check_overrides', [
+            'team_id' => $team->id,
+            'user_id' => $user->id,
+            'check_id' => $check->id,
+            'price_cents' => null,
+        ]);
+    }
+
     public function test_the_same_trio_cannot_be_added_twice(): void
     {
         $team = Team::factory()->create();
