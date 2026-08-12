@@ -6,6 +6,7 @@ use App\Enums\TeamPermission;
 use App\Models\Team;
 use App\Support\TenantManager;
 use Flux\Flux;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Number;
@@ -13,8 +14,12 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Carteira\Enums\WalletTransactionType;
 use Modules\Carteira\Models\Wallet;
+use Modules\Carteira\Models\WalletTransaction;
 use Modules\Pagamentos\Actions\CreateRecharge;
+use Modules\Pagamentos\Enums\PaymentPurpose;
+use Modules\Pagamentos\Enums\PaymentStatus;
 use Modules\Pagamentos\Exceptions\RechargeAmountException;
 use Modules\Pagamentos\Models\PaymentIntent;
 use Modules\Pagamentos\Support\PayerData;
@@ -101,6 +106,35 @@ new #[Title('Carteira')] class extends Component {
         }
 
         return PaymentIntent::query()->find($this->intentId);
+    }
+
+    /**
+     * The team's most recent ledger lines, newest first — tenant-scoped like
+     * every WalletTransaction query, so this never needs an explicit team
+     * filter.
+     *
+     * @return Collection<int, WalletTransaction>
+     */
+    #[Computed]
+    public function razao(): Collection
+    {
+        return WalletTransaction::query()->latest()->limit(20)->get();
+    }
+
+    /**
+     * The team's recharge payment intents. Mirrors settings/⚡billing.blade.php's
+     * payments() computed, filtered to the Recharge purpose instead of Plan.
+     *
+     * @return Collection<int, PaymentIntent>
+     */
+    #[Computed]
+    public function recargas(): Collection
+    {
+        return PaymentIntent::acrossTenants()
+            ->where('team_id', $this->team()->id)
+            ->where('purpose', PaymentPurpose::Recharge->value)
+            ->latest()
+            ->get();
     }
 
     #[Computed]
@@ -267,5 +301,81 @@ new #[Title('Carteira')] class extends Component {
                 {{ __('Fale com quem administra a cobrança do time para recarregar a carteira.') }}
             </p>
         @endif
+
+        <div class="space-y-3">
+            <flux:heading size="sm">{{ __('Razão') }}</flux:heading>
+
+            <div class="rounded-xl border border-fire-500/14 bg-white/2 overflow-hidden">
+                @forelse ($this->razao as $lancamento)
+                    @php
+                        $credito = $lancamento->type->isCredit();
+                        $rotuloTipo = match ($lancamento->type) {
+                            WalletTransactionType::Recharge => __('Recarga'),
+                            WalletTransactionType::Charge => __('Cobrança'),
+                            WalletTransactionType::Refund => __('Estorno'),
+                            WalletTransactionType::Bonus => __('Bônus'),
+                            WalletTransactionType::Adjustment => __('Ajuste'),
+                        };
+                    @endphp
+                    <div
+                        wire:key="razao-{{ $lancamento->id }}"
+                        class="flex items-center justify-between gap-4 p-4 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
+                        data-test="razao-linha"
+                    >
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $credito ? 'border-ok/30 bg-ok/10 text-ok' : 'border-fire-500/30 bg-fire-500/10 text-fire-400' }}">
+                                    {{ $rotuloTipo }}
+                                </span>
+                                <span class="text-sm text-white/80">{{ $lancamento->description }}</span>
+                            </div>
+                            <p class="text-xs text-white/40">{{ $lancamento->created_at->format('d/m/Y H:i') }}</p>
+                        </div>
+
+                        <div class="text-right">
+                            <p class="font-mono text-sm {{ $credito ? 'text-ok' : 'text-fire-400' }}" data-test="razao-valor">
+                                {{ $credito ? '+' : '−' }} {{ Number::currency(abs($lancamento->amount_cents) / 100, in: 'BRL', locale: 'pt_BR') }}
+                            </p>
+                            <p class="text-xs text-white/40">
+                                {{ __('Saldo:') }} {{ Number::currency($lancamento->balance_after_cents / 100, in: 'BRL', locale: 'pt_BR') }}
+                            </p>
+                        </div>
+                    </div>
+                @empty
+                    <p class="p-4 text-sm text-white/55" data-test="razao-vazia">
+                        {{ __('Nenhum lançamento ainda — os movimentos da carteira aparecem aqui.') }}
+                    </p>
+                @endforelse
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <flux:heading size="sm">{{ __('Recargas') }}</flux:heading>
+
+            <div class="rounded-xl border border-fire-500/14 bg-white/2 overflow-hidden">
+                @forelse ($this->recargas as $recarga)
+                    <div
+                        wire:key="recarga-{{ $recarga->id }}"
+                        class="flex items-center justify-between gap-4 p-4 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
+                        data-test="recarga-linha"
+                    >
+                        <div class="space-y-1">
+                            <p class="text-sm text-white/80">{{ $recarga->created_at->format('d/m/Y') }}</p>
+                            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $recarga->status === PaymentStatus::Paid ? 'border-ok/30 bg-ok/10 text-ok' : 'border-white/14 bg-white/5 text-white/55' }}">
+                                {{ $recarga->status === PaymentStatus::Paid ? __('Paga') : __('Pendente') }}
+                            </span>
+                        </div>
+
+                        <p class="font-mono text-sm text-white" data-test="recarga-valor">
+                            {{ Number::currency($recarga->amount_cents / 100, in: 'BRL', locale: 'pt_BR') }}
+                        </p>
+                    </div>
+                @empty
+                    <p class="p-4 text-sm text-white/55" data-test="recargas-vazia">
+                        {{ __('Nenhuma recarga ainda — gere um Pix acima para começar.') }}
+                    </p>
+                @endforelse
+            </div>
+        </div>
     </div>
 </x-fire.glow>

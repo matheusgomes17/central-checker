@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Number;
 use Livewire\Livewire;
+use Modules\Carteira\Enums\WalletTransactionType;
 use Modules\Carteira\Models\Wallet;
+use Modules\Carteira\Models\WalletTransaction;
 use Modules\Pagamentos\Contracts\PaymentGateway;
 use Modules\Pagamentos\Enums\PaymentPurpose;
 use Modules\Pagamentos\Enums\PaymentStatus;
@@ -157,6 +159,118 @@ class CarteiraTest extends TestCase
         $response = $this->actingAs($user)->get(route('checker.carteira', $team));
 
         $response->assertForbidden();
+    }
+
+    public function test_the_ledger_shows_the_teams_entries(): void
+    {
+        [$user, $team] = $this->memberOf(TeamRole::Owner);
+        $wallet = Wallet::factory()->create(['team_id' => $team->id]);
+
+        WalletTransaction::factory()->create([
+            'team_id' => $team->id,
+            'wallet_id' => $wallet->id,
+            'type' => WalletTransactionType::Recharge,
+            'amount_cents' => 5000,
+            'balance_after_cents' => 5000,
+            'description' => 'Recarga via Pix',
+        ]);
+
+        WalletTransaction::factory()->create([
+            'team_id' => $team->id,
+            'wallet_id' => $wallet->id,
+            'type' => WalletTransactionType::Charge,
+            'amount_cents' => -1200,
+            'balance_after_cents' => 3800,
+            'description' => 'Consulta CPF',
+        ]);
+
+        // Isolamento: um lançamento de outro time não deve aparecer — o
+        // escopo do tenant é quem garante isso, não um filtro manual.
+        $outroTime = Team::factory()->create();
+        $outraCarteira = Wallet::factory()->create(['team_id' => $outroTime->id]);
+        WalletTransaction::factory()->create([
+            'team_id' => $outroTime->id,
+            'wallet_id' => $outraCarteira->id,
+            'description' => 'Lançamento de outro time',
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.carteira')
+            ->assertSee('Recarga via Pix')
+            ->assertSee('Consulta CPF')
+            ->assertSee((string) Number::currency(50, in: 'BRL', locale: 'pt_BR'))
+            ->assertSee((string) Number::currency(12, in: 'BRL', locale: 'pt_BR'))
+            ->assertSee((string) Number::currency(38, in: 'BRL', locale: 'pt_BR'))
+            ->assertDontSee('Lançamento de outro time');
+    }
+
+    public function test_the_recharge_history_shows_the_teams_payment_intents(): void
+    {
+        [$user, $team] = $this->memberOf(TeamRole::Owner);
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        PaymentIntent::factory()->paid()->create([
+            'team_id' => $team->id,
+            'purpose' => PaymentPurpose::Recharge,
+            'amount_cents' => 5000,
+        ]);
+
+        PaymentIntent::factory()->create([
+            'team_id' => $team->id,
+            'purpose' => PaymentPurpose::Recharge,
+            'status' => PaymentStatus::Pending,
+            'amount_cents' => 3000,
+        ]);
+
+        // Um intent de compra de plano não é uma recarga — não deve aparecer
+        // nesta seção.
+        PaymentIntent::factory()->paid()->create([
+            'team_id' => $team->id,
+            'purpose' => PaymentPurpose::Plan,
+            'amount_cents' => 9900,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.carteira')
+            ->assertSee((string) Number::currency(50, in: 'BRL', locale: 'pt_BR'))
+            ->assertSee((string) Number::currency(30, in: 'BRL', locale: 'pt_BR'))
+            ->assertDontSee((string) Number::currency(99, in: 'BRL', locale: 'pt_BR'));
+    }
+
+    public function test_empty_states_show_an_invitation(): void
+    {
+        [$user, $team] = $this->memberOf(TeamRole::Owner);
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.carteira')
+            ->assertSee('Nenhum lançamento ainda')
+            ->assertSee('Nenhuma recarga ainda');
+    }
+
+    public function test_a_comma_decimal_amount_charges_the_correct_centavos(): void
+    {
+        Http::fake(['*/transactions' => Http::response([
+            'id' => 'uuid-comma', 'copy_paste' => '000201-comma', 'qr_code' => 'base64comma==', 'status' => 'pending',
+        ], 201)]);
+
+        [$user, $team] = $this->memberOf(TeamRole::Owner);
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.carteira')
+            ->set('valor', '10,50')
+            ->call('recarregar')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('payment_intents', [
+            'amount_cents' => 1050,
+            'purpose' => 'recharge',
+        ]);
     }
 
     /**
