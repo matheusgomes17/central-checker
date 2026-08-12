@@ -111,6 +111,14 @@ class CheckResourceTest extends TestCase
         $this->assertSame(CheckStatus::Active, $check->status);
     }
 
+    public function test_the_maintenance_toggle_leaves_inactive_checks_alone(): void
+    {
+        $check = Check::factory()->create(['status' => CheckStatus::Inactive]);
+
+        Livewire::test(ListChecks::class)
+            ->assertTableActionHidden('toggleMaintenance', $check);
+    }
+
     public function test_the_panel_stays_shut_for_an_ordinary_user(): void
     {
         $this->actingAs(User::factory()->create());

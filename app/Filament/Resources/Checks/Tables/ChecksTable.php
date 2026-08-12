@@ -51,6 +51,7 @@ class ChecksTable
     {
         return Action::make('toggleMaintenance')
             ->label(fn (Check $record): string => $record->status === CheckStatus::Maintenance ? __('Reativar') : __('Manutenção'))
+            ->visible(fn (Check $record): bool => $record->status !== CheckStatus::Inactive)
             ->action(fn (Check $record) => $record->update([
                 'status' => $record->status === CheckStatus::Maintenance ? CheckStatus::Active : CheckStatus::Maintenance,
             ]))

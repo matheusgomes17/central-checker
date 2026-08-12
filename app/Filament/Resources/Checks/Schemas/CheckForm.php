@@ -33,7 +33,7 @@ class CheckForm
                     ->required()
                     ->native(false),
                 TextInput::make('price_cents')
-                    ->label(__('Price'))
+                    ->label(__('Preço'))
                     ->prefix('R$')
                     ->numeric()
                     ->minValue(0)
