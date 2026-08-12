@@ -16,6 +16,7 @@ Route::prefix('{current_team}')
         Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
         Route::livewire('checker/executar', 'pages::checker.executar')->name('checker.executar');
         Route::livewire('checker/carteira', 'pages::checker.carteira')->name('checker.carteira');
+        Route::livewire('checker/planos', 'pages::checker.planos')->name('checker.planos');
     });
 
 Route::middleware(['auth'])->group(function (): void {
