@@ -7,6 +7,7 @@ namespace App\Support;
 use App\Models\ApiToken;
 use App\Models\FailedJob;
 use App\Models\Membership;
+use App\Models\PlanCheck;
 use App\Models\PlanSubscription;
 use App\Models\SocialAccount;
 use App\Models\Team;
@@ -73,6 +74,11 @@ class TenantManager
         // pagamento sem nenhum tenant no contexto. Quem filtra o acesso é a
         // relação team(), não o escopo global.
         PlanSubscription::class,
+        // Catálogo global plano↔check: o operador define quais checks cada
+        // plano inclui, e todos os times leem a mesma tabela. A franquia é
+        // resolvida pela camada de billing sem tenant no contexto — mesma
+        // razão da entrada de Check acima.
+        PlanCheck::class,
     ];
 
     /**
