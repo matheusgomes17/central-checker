@@ -22,7 +22,7 @@ return new class extends Migration
             $table->bigInteger('balance_after_cents');
             $table->string('description');
             // Referência polimórfica sem FK: liga a linha à execução (ou, depois,
-            // ao pagamento) sem o módulo Carteira depender do módulo Consultas.
+            // ao pagamento) sem o módulo Carteira depender do módulo CheckerApi.
             $table->nullableMorphs('reference');
             $table->timestamps();
 

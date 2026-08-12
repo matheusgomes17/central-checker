@@ -24,7 +24,7 @@ it('confirmar um hold debita a carteira e grava a cobrança', function (): void 
     $team = funded(1000);
     $hold = resolve(ReserveCredit::class)->handle($team, 350);
 
-    $tx = resolve(ConfirmHold::class)->handle($hold, 'Consulta X');
+    $tx = resolve(ConfirmHold::class)->handle($hold, 'Check X');
 
     expect($tx->type)->toBe(WalletTransactionType::Charge)
         ->and($tx->amount_cents)->toBe(-350)
@@ -67,7 +67,7 @@ it('não confirma um hold já solto', function (): void {
 it('não solta um hold já confirmado', function (): void {
     $team = funded(1000);
     $hold = resolve(ReserveCredit::class)->handle($team, 350);
-    resolve(ConfirmHold::class)->handle($hold, 'Consulta X');
+    resolve(ConfirmHold::class)->handle($hold, 'Check X');
 
     resolve(ReleaseHold::class)->handle($hold->refresh());
 })->throws(HoldNotActiveException::class);

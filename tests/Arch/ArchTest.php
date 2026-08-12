@@ -45,12 +45,14 @@ arch('controllers não acessam o banco diretamente')
 |
 */
 
+// Str::studly (não strtolower+ucfirst) porque um nome de módulo pode ter mais
+// de uma palavra maiúscula (ex.: CheckerApi) — ucfirst(strtolower()) achataria
+// isso para "Checkerapi" e o namespace calculado abaixo nunca bateria com o
+// diretório de verdade, calando as regras desta seção em silêncio.
 $modules = array_map(
-    strtolower(...),
-    array_map(basename(...), glob(dirname(__DIR__, 2).'/modules/*', GLOB_ONLYDIR) ?: []),
+    fn (string $directory): string => Illuminate\Support\Str::studly(basename($directory)),
+    glob(dirname(__DIR__, 2).'/modules/*', GLOB_ONLYDIR) ?: [],
 );
-
-$modules = array_map(ucfirst(...), $modules);
 
 foreach ($modules as $module) {
     $siblings = array_values(array_filter(
