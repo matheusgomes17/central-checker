@@ -293,15 +293,21 @@ gateway.** Sem cobrança recorrente, a assinatura é um período pago à frente:
 O painel é do operador e só existe em `/admin` (ADR 0003). Resources:
 
 - **Consultas** — catálogo, preço, modo de cobrança, toggle de manutenção.
+  **✅ Entregue (Fase E-a).**
 - **Providers** — saúde e estado do circuit breaker, healthcheck manual.
-- **Planos** — inclusão de consultas + franquia/ilimitado.
+  Pendente (Fase E-c).
+- **Planos** — inclusão de consultas + franquia/ilimitado. **✅ Entregue
+  (Fase E-a).**
 - **Usuários** — overrides, crédito manual (vira `adjustment` no razão), preço
-  custom, bloqueio.
+  custom, bloqueio. Pendente (Fase E-b).
 - **Carteira / Razão** — leitura do razão de um time (append-only, sem editar).
-- **Recargas / Pagamentos** e **Assinaturas** — estado e histórico.
+  Pendente (Fase E-b).
+- **Recargas / Pagamentos** e **Assinaturas** — estado e histórico. Pendente
+  (Fase E-b).
 - **Execuções** — auditoria das consultas rodadas (sem PII crua — ver D9).
+  Pendente (Fase E-b).
 - **Relatórios** — receita, MRR, consultas/dia, **taxa de sucesso por provider**,
-  saldo agregado.
+  saldo agregado. Pendente (Fase E-c).
 
 Como no resto do painel: usuário e time são leitura e ação, não edição livre; a
 trilha de auditoria não tem criar/editar/apagar.
@@ -370,6 +376,10 @@ plano de implementação próprio.
   D4/D5) estão **concluídas**. Seguem as Fases E e F.
 - **E — Admin Filament.** Resources, relatórios, saúde de provider, gestão por
   usuário.
+
+  **Status:** a Fase E-a (catálogo — resources de Consultas e Planos) está
+  **concluída**. Seguem a Fase E-b (usuários/overrides/crédito/carteira/
+  execuções) e a Fase E-c (providers/relatórios).
 - **F — Frontend.** Migração/redesign do layout, telas do usuário, LGPD na tela.
 
 A ordem não é arbitrária: a carteira precisa do motor de consulta para ter o que

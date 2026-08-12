@@ -28,8 +28,8 @@ class PlanCheckForm
                     ->required()
                     ->native(false)
                     ->searchable()
-                    // The (plan, check_id) pair is unique in the database (23000); this
-                    // surfaces it as a form error before the insert is ever attempted.
+                    // O par (plan, check_id) é único no banco (23000); isto
+                    // antecipa o erro para o formulário antes de tentar o insert.
                     ->unique(ignoreRecord: true, modifyRuleUsing: function (Unique $rule, Get $get): Unique {
                         $plan = $get('plan');
 
