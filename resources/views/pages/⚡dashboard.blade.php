@@ -129,15 +129,26 @@ new #[Title('Dashboard')] class extends Component {
                 <h1 class="font-display text-2xl font-semibold text-white">{{ __('Como o time está usando o checker') }}</h1>
             </div>
 
-            <flux:button
-                :href="route('checker.executar', $this->team())"
-                variant="primary"
-                icon="bolt"
-                wire:navigate
-                data-test="dashboard-executar-consulta"
-            >
-                {{ __('Executar consulta') }}
-            </flux:button>
+            <div class="flex flex-wrap items-center gap-2">
+                <flux:button
+                    :href="route('checker.carteira', $this->team())"
+                    icon="wallet"
+                    wire:navigate
+                    data-test="dashboard-carteira"
+                >
+                    {{ __('Carteira') }}
+                </flux:button>
+
+                <flux:button
+                    :href="route('checker.executar', $this->team())"
+                    variant="primary"
+                    icon="bolt"
+                    wire:navigate
+                    data-test="dashboard-executar-consulta"
+                >
+                    {{ __('Executar consulta') }}
+                </flux:button>
+            </div>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-3">

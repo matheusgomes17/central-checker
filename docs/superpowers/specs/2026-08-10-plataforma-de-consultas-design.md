@@ -333,8 +333,7 @@ de qualquer variante Pro). Telas:
   de entrada validado, resultado, custo. Estado de "em manutenção" visível.
   **✅ Entregue (Fase F-1).**
 - **Carteira / Recarga** — saldo, gerar Pix (QR + copia-e-cola), histórico do
-  razão. **Pendente (Fase F-2)** — o backend `Pagamentos`/`PaymentIntent` já
-  existe; F-2 reaproveita o padrão da página de billing.
+  razão. **✅ Entregue (Fase F-2).**
 - **Planos** — agora **self-service** via VirtualPay (o legado mandava falar no
   Telegram). **Pendente (Fase F-3).**
 - **Perfil** e **Histórico** de consultas. **Pendente (Fase F-4).**
@@ -402,8 +401,10 @@ plano de implementação próprio.
 
   **Status:** **Fase F-1 concluída** (dashboard com stat-cards e timer de
   plano, tela de executar consulta com formulário validado/resultado/custo/
-  estado de manutenção, e a base do sistema visual "fogo"). Seguem as Fases
-  F-2 (carteira/recarga), F-3 (planos self-service) e F-4 (perfil/histórico).
+  estado de manutenção, e a base do sistema visual "fogo"). **Fase F-2
+  concluída** (tela de carteira/recarga — saldo, Pix com QR e copia-e-cola,
+  razão e histórico de recargas — mais o link de navegação até ela). Seguem
+  as Fases F-3 (planos self-service) e F-4 (perfil/histórico).
 
 A ordem não é arbitrária: a carteira precisa do motor de consulta para ter o que
 cobrar; o pagamento precisa da carteira para ter o que creditar; o plano precisa
