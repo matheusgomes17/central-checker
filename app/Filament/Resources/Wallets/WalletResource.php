@@ -18,9 +18,10 @@ use Override;
 use UnitEnum;
 
 /**
- * The team's balance, read-only — the row action `creditar` is the one
- * deliberate write, and it goes through CreditWallet rather than touching
- * balance_cents directly, so every credit lands as a ledger line too.
+ * The team's balance, read-only — the row action that credits the wallet is
+ * the one deliberate write, and it goes through CreditWallet rather than
+ * touching balance_cents directly, so every credit lands as a ledger line
+ * too.
  *
  * The model is tenant scoped like every domain model, but the panel has no
  * ambient tenant — so the default query would always come back empty. This

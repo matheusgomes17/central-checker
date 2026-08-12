@@ -15,7 +15,7 @@ use Modules\Carteira\Models\WalletTransaction;
 use Tests\TestCase;
 
 /**
- * The razão is append-only — a correction is another line, never an edit —
+ * The ledger is append-only — a correction is another line, never an edit —
  * so this resource must stay read-only, and, like WalletResource, must drop
  * TenantScope on getEloquentQuery() to see every team's lines.
  */

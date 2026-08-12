@@ -19,8 +19,8 @@ use Tests\TestCase;
 /**
  * Like UserCheckOverrideResource, the sharpest edge here is the TenantScope
  * drop on getEloquentQuery() — without it the list is always empty. The
- * second edge is the "creditar" row action: it must go through CreditWallet
- * so the credit lands as an `adjustment` line in the ledger, never a bare
+ * second edge is the credit row action: it must go through CreditWallet so
+ * the credit lands as an `adjustment` line in the ledger, never a bare
  * balance write.
  */
 class WalletResourceTest extends TestCase

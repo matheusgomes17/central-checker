@@ -18,7 +18,7 @@ use Override;
 use UnitEnum;
 
 /**
- * The razão — append-only by design. A correction is another line, never an
+ * The ledger — append-only by design. A correction is another line, never an
  * edit, so this resource stays entirely read-only.
  *
  * The model is tenant scoped like every domain model, but the panel has no
