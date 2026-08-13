@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\Team;
 use Illuminate\Support\Facades\Http;
-use Modules\Carteira\Models\WalletTransaction;
 use Modules\Pagamentos\Actions\CreateRecharge;
 use Modules\Pagamentos\Contracts\PaymentGateway;
 use Modules\Pagamentos\Enums\PaymentStatus;
@@ -12,6 +11,7 @@ use Modules\Pagamentos\Exceptions\RechargeAmountException;
 use Modules\Pagamentos\Gateways\VirtualPayGateway;
 use Modules\Pagamentos\Models\PaymentIntent;
 use Modules\Pagamentos\Support\PayerData;
+use Modules\Wallet\Models\WalletTransaction;
 
 beforeEach(function (): void {
     // O binding real (Task 8) resolve com credenciais de config (string vazia
