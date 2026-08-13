@@ -26,7 +26,7 @@ use Modules\CheckerApi\Models\CheckExecution;
  * circuit breaker, neither is a use of the check the team should pay for.
  *
  * Success alone is not enough, though: `used` also requires
- * `consumed_franquia`, set per execution by `ExecutarCheck` only on the
+ * `consumed_franquia`, set per execution by `ExecuteCheck` only on the
  * allowance-free branch. A granted (comp) override or a credit charge is
  * outside the plan by design and must not eat into it.
  */

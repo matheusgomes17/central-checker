@@ -37,7 +37,7 @@ use Throwable;
  * the money across the slow provider call so two runs cannot spend the same
  * balance.
  */
-class ExecutarCheck
+class ExecuteCheck
 {
     public function __construct(
         private readonly ProviderRegistry $registry,

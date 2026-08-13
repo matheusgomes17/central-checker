@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Product;
 
-use App\Actions\CheckerApi\ExecutarCheck;
+use App\Actions\CheckerApi\ExecuteCheck;
 use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
@@ -27,7 +27,7 @@ use Tests\TestCase;
  * field, run it, see the result and what it cost. Covers the input contract
  * (one field, digits + length only, no check-digit yet — see the closure
  * rule in the volt component for why), the exception-to-message mapping for
- * every way {@see ExecutarCheck::handle()} can refuse, and that checks in
+ * every way {@see ExecuteCheck::handle()} can refuse, and that checks in
  * maintenance stay visible instead of disappearing (D8).
  */
 class ExecutarConsultaTest extends TestCase

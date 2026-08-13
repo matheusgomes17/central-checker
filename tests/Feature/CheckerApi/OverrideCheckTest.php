@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Actions\CheckerApi\ExecutarCheck;
+use App\Actions\CheckerApi\ExecuteCheck;
 use App\Enums\TeamRole;
 use App\Models\PlanCheck;
 use App\Models\PlanSubscription;
@@ -60,7 +60,7 @@ it('override bloqueado impede a execução e não toca a carteira', function ():
         'check_id' => $check->id,
     ]);
 
-    expect(fn () => resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user))
+    expect(fn () => resolve(ExecuteCheck::class)->handle($check, overrideInput(), $user))
         ->toThrow(CheckBlockedForUserException::class);
 
     expect(CheckExecution::query()->count())->toBe(0)
@@ -77,7 +77,7 @@ it('override bloqueado e concedido ao mesmo tempo bloqueia — block vence grant
         'check_id' => $check->id,
     ]);
 
-    expect(fn () => resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user))
+    expect(fn () => resolve(ExecuteCheck::class)->handle($check, overrideInput(), $user))
         ->toThrow(CheckBlockedForUserException::class);
 
     expect(CheckExecution::query()->count())->toBe(0)
@@ -95,7 +95,7 @@ it('override concedido executa grátis mesmo com preço não coberto pelo plano'
         'check_id' => $check->id,
     ]);
 
-    $execution = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+    $execution = resolve(ExecuteCheck::class)->handle($check, overrideInput(), $user);
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(1000)
         ->and($execution->outcome->value)->toBe('success')
@@ -112,7 +112,7 @@ it('override com preço custom cobra o valor do override, não o do check', func
         'check_id' => $check->id,
     ]);
 
-    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+    resolve(ExecuteCheck::class)->handle($check, overrideInput(), $user);
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(900);
 });
@@ -122,7 +122,7 @@ it('sem override mantém o comportamento de crédito do D-b', function (): void 
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
     $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
 
-    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+    resolve(ExecuteCheck::class)->handle($check, overrideInput(), $user);
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(650);
 });
@@ -139,7 +139,7 @@ it('override de outro usuário não bloqueia este', function (): void {
         'check_id' => $check->id,
     ]);
 
-    $execution = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+    $execution = resolve(ExecuteCheck::class)->handle($check, overrideInput(), $user);
 
     expect($execution->outcome->value)->toBe('success')
         ->and(Wallet::forTeam($team)->balance_cents)->toBe(650);
@@ -155,7 +155,7 @@ it('sem usuário nenhum override é aplicado', function (): void {
         'check_id' => $check->id,
     ]);
 
-    $execution = resolve(ExecutarCheck::class)->handle($check, overrideInput());
+    $execution = resolve(ExecuteCheck::class)->handle($check, overrideInput());
 
     expect($execution->outcome->value)->toBe('success')
         ->and(Wallet::forTeam($team)->balance_cents)->toBe(650);
@@ -179,16 +179,16 @@ it('override concedido (comp) não consome a franquia compartilhada do time', fu
     resolve(TenantManager::class)->set($team);
 
     // Usuário A tem grant: roda 3x, mais do que a quota do time (2), grátis.
-    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userA);
-    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userA);
-    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userA);
+    resolve(ExecuteCheck::class)->handle($check, overrideInput(), $userA);
+    resolve(ExecuteCheck::class)->handle($check, overrideInput(), $userA);
+    resolve(ExecuteCheck::class)->handle($check, overrideInput(), $userA);
 
     $status = resolve(Allowance::class)->for($team, $check);
     expect($status->used)->toBe(0)
         ->and($status->hasRemaining())->toBeTrue();
 
     // Usuário B, sem override, ainda executa grátis dentro da franquia do plano.
-    $executionB = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userB);
+    $executionB = resolve(ExecuteCheck::class)->handle($check, overrideInput(), $userB);
 
     expect($executionB->outcome->value)->toBe('success')
         ->and($executionB->consumed_franquia)->toBeTrue()
@@ -202,7 +202,7 @@ it('execução sob franquia do plano incrementa o used', function (): void {
     $check = Check::factory()->create(['provider_key' => 'fake']);
     PlanCheck::factory()->create(['plan' => 'pro', 'check_id' => $check->id, 'quota' => 2]);
 
-    $execution = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+    $execution = resolve(ExecuteCheck::class)->handle($check, overrideInput(), $user);
 
     expect($execution->consumed_franquia)->toBeTrue()
         ->and(resolve(Allowance::class)->for($team, $check)->used)->toBe(1);
@@ -216,9 +216,9 @@ it('cobrança em crédito após franquia esgotada não consome mais franquia', f
     PlanCheck::factory()->create(['plan' => 'pro', 'check_id' => $check->id, 'quota' => 1]);
 
     // Primeira: dentro da franquia, grátis, used vai a 1 (o teto).
-    resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+    resolve(ExecuteCheck::class)->handle($check, overrideInput(), $user);
     // Segunda: franquia esgotada, cai para crédito.
-    $creditExecution = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
+    $creditExecution = resolve(ExecuteCheck::class)->handle($check, overrideInput(), $user);
 
     expect($creditExecution->consumed_franquia)->toBeFalse()
         ->and(Wallet::forTeam($team)->balance_cents)->toBe(650)

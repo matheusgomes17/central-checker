@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Actions\CheckerApi\ExecutarCheck;
+use App\Actions\CheckerApi\ExecuteCheck;
 use App\Models\Team;
 use App\Support\TenantManager;
 use Modules\CheckerApi\Enums\ProviderOutcome;
@@ -26,7 +26,7 @@ it('grava execução de sucesso com o resultado', function (): void {
     $registry->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
     $check = Check::factory()->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarCheck::class)->handle($check, runInput());
+    $execution = resolve(ExecuteCheck::class)->handle($check, runInput());
 
     expect($execution->outcome)->toBe(ProviderOutcome::Success)
         ->and($execution->result)->toBe(['nome' => 'Fulano'])
@@ -43,7 +43,7 @@ it('grava nada encontrado sem resultado', function (): void {
     $registry->register(FakeProvider::returning(ProviderResult::noData()));
     $check = Check::factory()->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarCheck::class)->handle($check, runInput());
+    $execution = resolve(ExecuteCheck::class)->handle($check, runInput());
 
     expect($execution->outcome)->toBe(ProviderOutcome::NoData)
         ->and($execution->result)->toBeNull();
@@ -57,7 +57,7 @@ it('grava falha com o motivo', function (): void {
     $registry->register(FakeProvider::returning(ProviderResult::failed('timeout')));
     $check = Check::factory()->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarCheck::class)->handle($check, runInput());
+    $execution = resolve(ExecuteCheck::class)->handle($check, runInput());
 
     expect($execution->outcome)->toBe(ProviderOutcome::Failed)
         ->and($execution->failure_reason)->toBe('timeout')
@@ -72,5 +72,5 @@ it('recusa executar check em manutenção', function (): void {
     $registry->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
     $check = Check::factory()->inMaintenance()->create(['provider_key' => 'fake']);
 
-    resolve(ExecutarCheck::class)->handle($check, runInput());
+    resolve(ExecuteCheck::class)->handle($check, runInput());
 })->throws(CheckUnavailableException::class);

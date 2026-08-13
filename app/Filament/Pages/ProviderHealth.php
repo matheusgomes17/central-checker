@@ -67,7 +67,7 @@ class ProviderHealth extends Page implements HasTable
             ])
             ->recordActions([
                 $this->healthcheckAction(),
-                $this->resetarBreakerAction(),
+                $this->resetBreakerAction(),
             ]);
     }
 
@@ -188,20 +188,20 @@ class ProviderHealth extends Page implements HasTable
      * that the provider is healthy again, ahead of the cooldown expiring on
      * its own.
      */
-    private function resetarBreakerAction(): Action
+    private function resetBreakerAction(): Action
     {
-        return Action::make('resetarBreaker')
+        return Action::make('resetBreaker')
             ->label(__('Resetar breaker'))
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('warning')
             ->requiresConfirmation()
-            ->action($this->runResetarBreaker(...));
+            ->action($this->runResetBreaker(...));
     }
 
     /**
      * @param  ProviderRow  $record
      */
-    private function runResetarBreaker(array $record): void
+    private function runResetBreaker(array $record): void
     {
         resolve(CircuitBreaker::class)->reset($record['key']);
 

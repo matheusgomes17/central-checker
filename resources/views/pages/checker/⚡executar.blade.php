@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Actions\CheckerApi\ExecutarCheck;
+use App\Actions\CheckerApi\ExecuteCheck;
 use App\Models\Team;
 use App\Support\TenantManager;
 use Illuminate\Support\Collection;
@@ -44,7 +44,7 @@ new #[Title('Executar consulta')] class extends Component {
 
     /**
      * Validates, then runs the selected check, translating every domain
-     * exception {@see ExecutarCheck::handle()} can throw into a friendly
+     * exception {@see ExecuteCheck::handle()} can throw into a friendly
      * field error — the raw exception message never reaches the screen.
      */
     public function executar(): void
@@ -81,7 +81,7 @@ new #[Title('Executar consulta')] class extends Component {
         $input = CheckInput::fromArray(['documento' => $digitos]);
 
         try {
-            $execution = resolve(ExecutarCheck::class)->handle($check, $input, Auth::user());
+            $execution = resolve(ExecuteCheck::class)->handle($check, $input, Auth::user());
         } catch (CheckUnavailableException) {
             $this->addError('checkId', __('Esta consulta está em manutenção no momento. Tente de novo mais tarde.'));
 

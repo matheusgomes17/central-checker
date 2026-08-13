@@ -35,7 +35,7 @@ class WalletsTable
             ])
             ->defaultSort('balance_cents', 'desc')
             ->recordActions([
-                self::creditar(),
+                self::credit(),
             ]);
     }
 
@@ -44,29 +44,29 @@ class WalletsTable
      * CreditWallet so it locks the wallet row and writes the ledger line
      * itself. Never touches balance_cents directly.
      */
-    private static function creditar(): Action
+    private static function credit(): Action
     {
-        return Action::make('creditar')
+        return Action::make('credit')
             ->label(__('Creditar'))
             ->icon(Heroicon::OutlinedPlus)
             ->schema([
-                TextInput::make('valor')
+                TextInput::make('amount')
                     ->label(__('Valor'))
                     ->prefix('R$')
                     ->numeric()
                     ->minValue(0.01)
                     ->step(0.01)
                     ->required(),
-                Textarea::make('descricao')
+                Textarea::make('reason')
                     ->label(__('Motivo'))
                     ->required(),
             ])
             ->action(function (Wallet $record, array $data): void {
                 $team = $record->team;
-                $valor = $data['valor'] ?? null;
-                $descricao = $data['descricao'] ?? null;
+                $amount = $data['amount'] ?? null;
+                $reason = $data['reason'] ?? null;
 
-                if (! $team instanceof Team || ! is_numeric($valor) || ! is_string($descricao)) {
+                if (! $team instanceof Team || ! is_numeric($amount) || ! is_string($reason)) {
                     Notification::make()
                         ->title(__('Não foi possível creditar'))
                         ->body(__('Dados inválidos. Confira o valor e o motivo.'))
@@ -78,9 +78,9 @@ class WalletsTable
 
                 resolve(CreditWallet::class)->handle(
                     $team,
-                    (int) round(((float) $valor) * 100),
+                    (int) round(((float) $amount) * 100),
                     WalletTransactionType::Adjustment,
-                    $descricao,
+                    $reason,
                 );
 
                 Notification::make()

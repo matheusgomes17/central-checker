@@ -99,7 +99,7 @@ class ProviderHealthPageTest extends TestCase
         $this->assertTrue($breaker->isOpen('serasa'));
 
         Livewire::test(ProviderHealth::class)
-            ->callAction(TestAction::make('resetarBreaker')->table('serasa'))
+            ->callAction(TestAction::make('resetBreaker')->table('serasa'))
             ->assertNotified();
 
         $this->assertFalse($breaker->isOpen('serasa'));

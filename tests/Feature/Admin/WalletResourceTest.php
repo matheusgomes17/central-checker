@@ -66,9 +66,9 @@ class WalletResourceTest extends TestCase
         $wallet = Wallet::factory()->create(['team_id' => $team->id, 'balance_cents' => 0]);
 
         Livewire::test(ListWallets::class)
-            ->callAction(TestAction::make('creditar')->table($wallet), data: [
-                'valor' => '10.00',
-                'descricao' => 'cortesia',
+            ->callAction(TestAction::make('credit')->table($wallet), data: [
+                'amount' => '10.00',
+                'reason' => 'cortesia',
             ]);
 
         $wallet->refresh();

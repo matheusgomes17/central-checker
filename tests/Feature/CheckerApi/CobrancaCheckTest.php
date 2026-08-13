@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Actions\CheckerApi\ExecutarCheck;
+use App\Actions\CheckerApi\ExecuteCheck;
 use App\Models\Team;
 use App\Support\TenantManager;
 use Modules\CheckerApi\Models\Check;
@@ -43,7 +43,7 @@ it('sucesso debita o preço e liga a cobrança à execução', function (): void
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
     $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarCheck::class)->handle($check, cobrancaInput());
+    $execution = resolve(ExecuteCheck::class)->handle($check, cobrancaInput());
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(650)
         ->and(WalletHold::query()->where('status', WalletHoldStatus::Settled->value)->count())->toBe(1);
@@ -58,7 +58,7 @@ it('nada encontrado não cobra e solta o hold', function (): void {
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::noData()));
     $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
 
-    resolve(ExecutarCheck::class)->handle($check, cobrancaInput());
+    resolve(ExecuteCheck::class)->handle($check, cobrancaInput());
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(1000)
         ->and(Wallet::forTeam($team)->available())->toBe(1000)
@@ -70,7 +70,7 @@ it('falha técnica não cobra e solta o hold', function (): void {
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::failed('timeout')));
     $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
 
-    resolve(ExecutarCheck::class)->handle($check, cobrancaInput());
+    resolve(ExecuteCheck::class)->handle($check, cobrancaInput());
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(1000)
         ->and(Wallet::forTeam($team)->available())->toBe(1000);
@@ -82,7 +82,7 @@ it('saldo insuficiente recusa antes de executar e não registra execução', fun
     resolve(ProviderRegistry::class)->register($provider);
     $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
 
-    expect(fn () => resolve(ExecutarCheck::class)->handle($check, cobrancaInput()))
+    expect(fn () => resolve(ExecuteCheck::class)->handle($check, cobrancaInput()))
         ->toThrow(InsufficientBalanceException::class);
 
     expect(CheckExecution::query()->count())->toBe(0)
@@ -94,7 +94,7 @@ it('check de preço zero não toca a carteira', function (): void {
     resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
     $check = Check::factory()->priced(0)->create(['provider_key' => 'fake']);
 
-    $execution = resolve(ExecutarCheck::class)->handle($check, cobrancaInput());
+    $execution = resolve(ExecuteCheck::class)->handle($check, cobrancaInput());
 
     expect($execution->outcome->value)->toBe('success')
         ->and(WalletTransaction::query()->count())->toBe(0)
