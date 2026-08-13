@@ -131,7 +131,7 @@ new #[Title('Dashboard')] class extends Component {
 
             <div class="flex flex-wrap items-center gap-2">
                 <flux:button
-                    :href="route('checker.carteira', $this->team())"
+                    :href="route('checker.carteira')"
                     icon="wallet"
                     wire:navigate
                     data-test="dashboard-carteira"
@@ -140,7 +140,7 @@ new #[Title('Dashboard')] class extends Component {
                 </flux:button>
 
                 <flux:button
-                    :href="route('checker.planos', $this->team())"
+                    :href="route('checker.planos')"
                     icon="rectangle-stack"
                     wire:navigate
                     data-test="dashboard-planos"
@@ -149,7 +149,7 @@ new #[Title('Dashboard')] class extends Component {
                 </flux:button>
 
                 <flux:button
-                    :href="route('checker.historico', $this->team())"
+                    :href="route('checker.historico')"
                     icon="clock"
                     wire:navigate
                     data-test="dashboard-historico"
@@ -167,7 +167,7 @@ new #[Title('Dashboard')] class extends Component {
                 </flux:button>
 
                 <flux:button
-                    :href="route('checker.executar', $this->team())"
+                    :href="route('checker.executar')"
                     variant="primary"
                     icon="bolt"
                     wire:navigate

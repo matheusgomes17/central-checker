@@ -49,7 +49,7 @@ class DashboardTest extends TestCase
             'outcome' => ProviderOutcome::Failed,
         ]);
 
-        $response = $this->actingAs($user)->get(route('dashboard', $team));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertOk()
             ->assertSee('4') // total de consultas no período
@@ -63,9 +63,9 @@ class DashboardTest extends TestCase
 
         Wallet::factory()->create(['team_id' => $team->id]);
 
-        $response = $this->actingAs($user)->get(route('dashboard', $team));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
-        $response->assertOk()->assertSee(route('checker.carteira', $team), false);
+        $response->assertOk()->assertSee(route('checker.carteira'), false);
     }
 
     public function test_a_member_sees_a_link_to_the_planos(): void
@@ -74,9 +74,9 @@ class DashboardTest extends TestCase
 
         Wallet::factory()->create(['team_id' => $team->id]);
 
-        $response = $this->actingAs($user)->get(route('dashboard', $team));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
-        $response->assertOk()->assertSee(route('checker.planos', $team), false);
+        $response->assertOk()->assertSee(route('checker.planos'), false);
     }
 
     public function test_a_member_sees_a_link_to_the_historico(): void
@@ -85,9 +85,9 @@ class DashboardTest extends TestCase
 
         Wallet::factory()->create(['team_id' => $team->id]);
 
-        $response = $this->actingAs($user)->get(route('dashboard', $team));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
-        $response->assertOk()->assertSee(route('checker.historico', $team), false);
+        $response->assertOk()->assertSee(route('checker.historico'), false);
     }
 
     public function test_a_member_sees_a_link_to_the_profile(): void
@@ -96,7 +96,7 @@ class DashboardTest extends TestCase
 
         Wallet::factory()->create(['team_id' => $team->id]);
 
-        $response = $this->actingAs($user)->get(route('dashboard', $team));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertOk()->assertSee(route('profile.edit'), false);
     }
@@ -107,7 +107,7 @@ class DashboardTest extends TestCase
 
         Wallet::factory()->create(['team_id' => $team->id]);
 
-        $response = $this->actingAs($user)->get(route('dashboard', $team));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         // "0,0%" é o que um cálculo ingênuo de 0/0 mostraria — o texto exato
         // que a regra da honestidade proíbe. Não usamos "0%" sozinho: aparece
@@ -136,7 +136,7 @@ class DashboardTest extends TestCase
 
         Wallet::factory()->create(['team_id' => $team->id]);
 
-        $response = $this->actingAs($user)->get(route('dashboard', $team));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         // "expira em 15 dias" — texto do x-fire.plan-timer para daysLeft=15.
         $response->assertOk()
@@ -144,12 +144,21 @@ class DashboardTest extends TestCase
             ->assertSee('aria-valuenow="33"', false);
     }
 
-    public function test_a_non_member_cannot_view_another_teams_dashboard(): void
+    /**
+     * There is no team slug in the URL anymore for the middleware to refuse,
+     * so the only way left to reach the dashboard without a team is to have
+     * none as current — the edge case EnsureTeamMembership still 403s on.
+     */
+    public function test_a_user_without_a_current_team_cannot_view_the_dashboard(): void
     {
         $user = User::factory()->create();
-        $team = Team::factory()->create();
+        // A relação currentTeam já foi carregada pelo switchTeam() da factory
+        // — sem descartá-la, update() muda a coluna mas o objeto em memória
+        // ainda responde com o time antigo.
+        $user->update(['current_team_id' => null]);
+        $user->unsetRelation('currentTeam');
 
-        $response = $this->actingAs($user)->get(route('dashboard', $team));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
         $response->assertForbidden();
     }
@@ -163,6 +172,7 @@ class DashboardTest extends TestCase
         $team = Team::factory()->create();
         $team->members()->attach($user);
         $user->assignTeamRole($team, TeamRole::Member);
+        $user->switchTeam($team);
 
         return [$user, $team];
     }

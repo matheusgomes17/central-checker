@@ -19,7 +19,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\URL;
 
 trait HasTeams
 {
@@ -119,8 +118,6 @@ trait HasTeams
         // invalidar aqui, tudo que rodar depois da troca continua escopado no
         // time anterior.
         resolve(TenantManager::class)->set($team);
-
-        URL::defaults(['current_team' => $team->slug]);
 
         return true;
     }

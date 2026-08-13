@@ -57,7 +57,7 @@ class AuthenticationTest extends TestCase
         $payload = $jsonResponse->getData();
 
         $this->assertSame(
-            route('dashboard', ['current_team' => $user->personalTeam()->slug]),
+            route('dashboard'),
             $payload->redirect,
         );
     }

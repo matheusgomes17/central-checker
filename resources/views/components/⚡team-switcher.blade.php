@@ -35,46 +35,12 @@ new class extends Component {
             403
         );
 
-        $currentTeamSlug = $user->currentTeam?->slug;
-
         $user->switchTeam($team);
 
-        if (! request()->header('Referer')) {
-            $this->redirectRoute('dashboard', ['current_team' => $team->slug], navigate: true);
-
-            return;
-        }
-
-        if (! $currentTeamSlug) {
-            $this->redirect(request()->header('Referer'), navigate: true);
-
-            return;
-        }
-
-        $redirectTo = $this->replaceCurrentTeamInReferer(
-            request()->header('Referer'),
-            $currentTeamSlug,
-            $team->slug,
-        );
-
-        $this->redirect($redirectTo ?? request()->header('Referer'), navigate: true);
-    }
-
-    protected function replaceCurrentTeamInReferer(string $referer, string $currentTeamSlug, string $newTeamSlug): ?string
-    {
-        $redirectTo = preg_replace(
-            '#/'.preg_quote($currentTeamSlug, '#').'(?=/|\?|$)#',
-            '/'.$newTeamSlug,
-            $referer,
-            1,
-        );
-
-        return preg_replace(
-            '#([?&]current_team=)'.preg_quote($currentTeamSlug, '#').'(?=&|$)#',
-            '$1'.$newTeamSlug,
-            $redirectTo ?? $referer,
-            1,
-        );
+        // Nenhuma URL do produto carrega o slug do time, então não há nada
+        // para reescrever: o mesmo Referer (ou /dashboard, na falta de um)
+        // já serve o time novo depois do switchTeam.
+        $this->redirect(request()->header('Referer') ?? route('dashboard'), navigate: true);
     }
 }; ?>
 

@@ -26,10 +26,6 @@ class EnsureTeamMembership
 
         $this->ensureTeamMemberHasRequiredRole($user, $team, $minimumRole);
 
-        if ($request->route('current_team') && ! $user->isCurrentTeam($team)) {
-            $user->switchTeam($team);
-        }
-
         return $next($request);
     }
 
@@ -56,15 +52,24 @@ class EnsureTeamMembership
 
     /**
      * Get the team associated with the request.
+     *
+     * Routes with an explicit `{team}` parameter (settings/teams/{team}) resolve
+     * it by slug, same as always. Every other route behind this middleware —
+     * the product routes — carries no team in the URL at all, so the team is
+     * whatever the signed in user currently has as their current team.
      */
     protected function team(Request $request): ?Team
     {
-        $team = $request->route('current_team') ?? $request->route('team');
+        $team = $request->route('team');
 
         if (is_string($team)) {
             return Team::where('slug', $team)->first();
         }
 
-        return $team;
+        if ($team instanceof Team) {
+            return $team;
+        }
+
+        return $request->user()?->currentTeam;
     }
 }

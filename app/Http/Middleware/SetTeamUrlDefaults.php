@@ -18,9 +18,12 @@ class SetTeamUrlDefaults
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Só o default de `team` continua útil: settings/teams/{team} é a
+        // única rota que ainda tem esse param na URL. As rotas do produto não
+        // levam mais time nenhum no caminho, então não há mais `current_team`
+        // para preencher.
         if ($currentTeam = $request->user()?->currentTeam) {
             URL::defaults([
-                'current_team' => $currentTeam->slug,
                 'team' => $currentTeam->slug,
             ]);
         }

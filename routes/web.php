@@ -10,8 +10,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 
-Route::prefix('{current_team}')
-    ->middleware(['auth', 'verified', EnsureTeamMembership::class])
+// Sem prefixo de time: o tenant vem do currentTeam do usuário logado
+// (TenantManager::current() já cai nele), não da URL. Trocar de time é o
+// seletor de times, não a barra de endereço.
+Route::middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function (): void {
         Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
         Route::livewire('checker/executar', 'pages::checker.executar')->name('checker.executar');

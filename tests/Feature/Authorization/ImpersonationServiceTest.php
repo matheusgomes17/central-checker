@@ -112,12 +112,11 @@ class ImpersonationServiceTest extends TestCase
 
         $this->assertTrue($admin->fresh()?->isCurrentTeam($adminTeam));
 
-        // A coluna não é a parte perigosa. O default da URL continuaria
-        // apontando para o time da outra pessoa pelo resto da requisição, e a
-        // próxima página seria um 403 sem explicação — o redirecionamento que
-        // o controller faz logo depois já sai com o slug errado.
+        // A coluna não é a parte perigosa. Sem invalidar o TenantManager
+        // aqui, tudo que rodar depois do stop continuaria escopado no time da
+        // outra pessoa pelo resto da requisição, e a próxima página seria um
+        // 403 sem explicação. A URL não carrega mais slug nenhum para checar.
         $this->assertSame($adminTeam->id, resolve(TenantManager::class)->id());
-        $this->assertStringContainsString("/{$adminTeam->slug}/", route('dashboard'));
     }
 
     /**

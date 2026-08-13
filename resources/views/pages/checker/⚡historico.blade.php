@@ -112,7 +112,7 @@ new #[Title('Histórico de consultas')] class extends Component {
                 <p class="mt-1 text-sm text-white/55">{{ __('Execute a primeira e ela aparece aqui, com o resultado guardado só para você.') }}</p>
 
                 <flux:button
-                    :href="route('checker.executar', $this->team())"
+                    :href="route('checker.executar')"
                     variant="primary"
                     icon="bolt"
                     wire:navigate

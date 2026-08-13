@@ -192,12 +192,21 @@ class PlanosTest extends TestCase
             ->assertDontSee('Este plano é menor que o uso atual');
     }
 
+    /**
+     * There is no team slug in the URL anymore for the middleware to refuse,
+     * so the only way left to reach the page without a team is to have none
+     * as current — the edge case EnsureTeamMembership still 403s on.
+     */
     public function test_the_page_requires_team_membership(): void
     {
         $user = User::factory()->create();
-        $team = Team::factory()->create();
+        // A relação currentTeam já foi carregada pelo switchTeam() da factory
+        // — sem descartá-la, update() muda a coluna mas o objeto em memória
+        // ainda responde com o time antigo.
+        $user->update(['current_team_id' => null]);
+        $user->unsetRelation('currentTeam');
 
-        $response = $this->actingAs($user)->get(route('checker.planos', $team));
+        $response = $this->actingAs($user)->get(route('checker.planos'));
 
         $response->assertForbidden();
     }
