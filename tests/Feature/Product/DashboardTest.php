@@ -28,7 +28,7 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_member_sees_consultas_balance_and_plan_name(): void
+    public function test_a_member_sees_checks_balance_and_plan_name(): void
     {
         [$user, $team] = $this->memberOf();
 
@@ -59,7 +59,7 @@ class DashboardTest extends TestCase
             ->assertSee('Pro');
     }
 
-    public function test_a_member_sees_a_link_to_the_carteira(): void
+    public function test_a_member_sees_a_link_to_the_wallet(): void
     {
         [$user, $team] = $this->memberOf();
 
@@ -70,7 +70,7 @@ class DashboardTest extends TestCase
         $response->assertOk()->assertSee(route('checker.wallet'), false);
     }
 
-    public function test_a_member_sees_a_link_to_the_planos(): void
+    public function test_a_member_sees_a_link_to_the_plans(): void
     {
         [$user, $team] = $this->memberOf();
 
@@ -81,7 +81,7 @@ class DashboardTest extends TestCase
         $response->assertOk()->assertSee(route('checker.plans'), false);
     }
 
-    public function test_a_member_sees_a_link_to_the_historico(): void
+    public function test_a_member_sees_a_link_to_the_history(): void
     {
         [$user, $team] = $this->memberOf();
 

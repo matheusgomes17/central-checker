@@ -58,16 +58,16 @@ aplicação:
 ```
 modules/
 ├── Consultas/   # catálogo, contrato de provider, resiliência, execução
-├── Carteira/    # wallet, razão append-only, holds, política de cobrança
-└── Pagamentos/  # abstração de gateway, driver VirtualPay, recarga, assinatura
+├── Wallet/      # wallet, razão append-only, holds, política de cobrança
+└── Payments/    # abstração de gateway, driver VirtualPay, recarga, assinatura
 ```
 
 Regra de dependência do projeto (verificada no CI): um módulo depende de `Core` e
 de si mesmo, **nunca de um irmão**. A composição acontece em `app/`. Então:
 
 - `Consultas` não sabe cobrar. Emite `ConsultaExecutada` / `ConsultaFalhou`.
-- `Carteira` não sabe consultar. Expõe `reservar()`, `confirmar()`, `liberar()`.
-- `Pagamentos` credita a carteira por evento, não por chamada direta.
+- `Wallet` não sabe consultar. Expõe `reservar()`, `confirmar()`, `liberar()`.
+- `Payments` credita a carteira por evento, não por chamada direta.
 - A **action de aplicação** `ExecutarConsulta` (em `app/Actions/Consultas/`) é o
   ponto de composição: reserva na carteira ou consome franquia, chama o provider,
   e confirma ou libera conforme o desfecho.
@@ -212,7 +212,7 @@ franquia compartilhada que os outros usuários do time dependem. Correção de
 revisão final da Fase D-c: `CheckExecution.consumed_franquia` marca, por
 execução, se ELA consumiu a franquia do plano — `true` só no ramo "franquia
 livre" do `ExecuteCheck`, `false` para grant, crédito e execução não
-coberta/grátis. `Franquia::used` filtra por `outcome=success` **e**
+coberta/grátis. `Allowance::used` filtra por `outcome=success` **e**
 `consumed_franquia=true`, então um grant ou uma cobrança em crédito nunca
 inflam o `used` de ninguém.
 
@@ -237,7 +237,7 @@ Desenho:
 - **Abstração `PaymentGateway`** (contrato) com **driver VirtualPay**. Como o
   gateway só faz uma operação, o contrato é enxuto: `criarCobrancaPix(valor,
   referencia, cliente): CobrancaPix` e a verificação do webhook. A regra de
-  arquitetura impede o driver de vazar para fora do módulo `Pagamentos`.
+  arquitetura impede o driver de vazar para fora do módulo `Payments`.
 - **Recarga e compra de plano usam o mesmo mecanismo** — um Pix avulso — e se
   distinguem pela `referencia` (`RECHARGE-<team>-<ts>` vs `PLAN-<slug>-<team>-<ts>`).
   Uma integração, dois propósitos. `PaymentIntent` guarda QR, copia-e-cola, status,
@@ -382,10 +382,10 @@ plano de implementação próprio.
 - **A — Módulo `Consultas` (núcleo).** Contrato, registro, `ResilientProvider`,
   circuit breaker, catálogo, execução, manutenção. Provider **falso** para teste.
   Ainda sem cobrar — roda e registra.
-- **B — Módulo `Carteira`.** Wallet, razão append-only, holds com expiração,
+- **B — Módulo `Wallet`.** Wallet, razão append-only, holds com expiração,
   política charge-on-success plugada na action `ExecutarConsulta`. Crédito manual
   do admin.
-- **C — Módulo `Pagamentos` (VirtualPay).** Abstração, recarga Pix, webhook
+- **C — Módulo `Payments` (VirtualPay).** Abstração, recarga Pix, webhook
   assinado e idempotente, crédito na carteira por evento. **Só adiciona** — a
   remoção do Cashier/Stripe foi movida para a Fase D (decisão do usuário: tirar a
   cobrança de plano antes de construir a substituta deixaria o produto sem billing

@@ -250,15 +250,15 @@ new #[Title('Dashboard')] class extends Component {
                     </div>
                 @else
                     <ul class="mt-4 divide-y divide-white/5">
-                        @foreach ($this->recentChecks as $execucao)
+                        @foreach ($this->recentChecks as $execution)
                             @php
-                                $rotuloOutcome = match ($execucao->outcome) {
+                                $rotuloOutcome = match ($execution->outcome) {
                                     ProviderOutcome::Success => __('Sucesso'),
                                     ProviderOutcome::NoData => __('Sem registro'),
                                     ProviderOutcome::Failed => __('Falhou'),
                                 };
 
-                                $corOutcome = match ($execucao->outcome) {
+                                $corOutcome = match ($execution->outcome) {
                                     ProviderOutcome::Success => 'border-ok/30 bg-ok/10 text-ok',
                                     ProviderOutcome::NoData => 'border-white/14 bg-white/5 text-white/55',
                                     ProviderOutcome::Failed => 'border-flame-danger/30 bg-flame-danger/10 text-flame-danger',
@@ -266,13 +266,13 @@ new #[Title('Dashboard')] class extends Component {
                             @endphp
 
                             <li
-                                wire:key="consulta-recente-{{ $execucao->id }}"
+                                wire:key="consulta-recente-{{ $execution->id }}"
                                 class="flex items-center justify-between gap-3 py-3 text-sm"
-                                data-test="consulta-recente-{{ $execucao->id }}"
+                                data-test="consulta-recente-{{ $execution->id }}"
                             >
                                 <div>
-                                    <p class="font-medium text-white">{{ $execucao->check->name }}</p>
-                                    <p class="text-xs text-white/40">{{ $execucao->created_at?->format('d/m H:i') }}</p>
+                                    <p class="font-medium text-white">{{ $execution->check->name }}</p>
+                                    <p class="text-xs text-white/40">{{ $execution->created_at?->format('d/m H:i') }}</p>
                                 </div>
 
                                 <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $corOutcome }}">
@@ -298,10 +298,10 @@ new #[Title('Dashboard')] class extends Component {
                     </div>
                 @else
                     <ul class="mt-4 divide-y divide-white/5">
-                        @foreach ($this->recentTransactions as $lancamento)
+                        @foreach ($this->recentTransactions as $entry)
                             @php
-                                $credito = $lancamento->type->isCredit();
-                                $rotuloTipo = match ($lancamento->type) {
+                                $credito = $entry->type->isCredit();
+                                $rotuloTipo = match ($entry->type) {
                                     WalletTransactionType::Recharge => __('Recarga'),
                                     WalletTransactionType::Charge => __('Cobrança'),
                                     WalletTransactionType::Refund => __('Estorno'),
@@ -311,19 +311,19 @@ new #[Title('Dashboard')] class extends Component {
                             @endphp
 
                             <li
-                                wire:key="transacao-recente-{{ $lancamento->id }}"
+                                wire:key="transacao-recente-{{ $entry->id }}"
                                 class="flex items-center justify-between gap-3 py-3 text-sm"
-                                data-test="transacao-recente-{{ $lancamento->id }}"
+                                data-test="transacao-recente-{{ $entry->id }}"
                             >
                                 <div>
                                     <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $credito ? 'border-ok/30 bg-ok/10 text-ok' : 'border-fire-500/30 bg-fire-500/10 text-fire-400' }}">
                                         {{ $rotuloTipo }}
                                     </span>
-                                    <p class="mt-1 text-xs text-white/40">{{ $lancamento->created_at?->format('d/m H:i') }}</p>
+                                    <p class="mt-1 text-xs text-white/40">{{ $entry->created_at?->format('d/m H:i') }}</p>
                                 </div>
 
                                 <p class="font-mono text-sm {{ $credito ? 'text-ok' : 'text-fire-400' }}">
-                                    {{ $credito ? '+' : '−' }} {{ Number::currency(abs($lancamento->amount_cents) / 100, in: 'BRL', locale: 'pt_BR') }}
+                                    {{ $credito ? '+' : '−' }} {{ Number::currency(abs($entry->amount_cents) / 100, in: 'BRL', locale: 'pt_BR') }}
                                 </p>
                             </li>
                         @endforeach
