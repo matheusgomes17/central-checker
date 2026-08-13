@@ -10,7 +10,9 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Number;
+use Modules\Carteira\Enums\WalletTransactionType;
 use Modules\Carteira\Models\Wallet;
+use Modules\Carteira\Models\WalletTransaction;
 use Modules\CheckerApi\Enums\ProviderOutcome;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
@@ -142,6 +144,93 @@ class DashboardTest extends TestCase
         $response->assertOk()
             ->assertSee('expira em 15 dias')
             ->assertSee('aria-valuenow="33"', false);
+    }
+
+    /**
+     * The fire-shell sidebar (resources/views/layouts/app/sidebar.blade.php)
+     * replaced the old Flux navigation with its own nav rows, each tagged
+     * with a `data-test` derived from the route name. This pins the six
+     * product destinations down as sidebar links, not just as links
+     * somewhere on the page (see the route()-string assertions above, which
+     * a link anywhere in the body would also satisfy).
+     */
+    public function test_the_sidebar_shows_links_to_every_product_destination(): void
+    {
+        [$user, $team] = $this->memberOf();
+
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk()
+            ->assertSeeHtml('data-test="sidebar-dashboard"')
+            ->assertSeeHtml('data-test="sidebar-checker.executar"')
+            ->assertSeeHtml('data-test="sidebar-checker.carteira"')
+            ->assertSeeHtml('data-test="sidebar-checker.planos"')
+            ->assertSeeHtml('data-test="sidebar-checker.historico"')
+            ->assertSeeHtml('data-test="sidebar-profile.edit"');
+    }
+
+    public function test_the_dashboard_shows_the_teams_recent_check_executions(): void
+    {
+        [$user, $team] = $this->memberOf();
+
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $check = Check::factory()->create(['name' => 'Consulta CPF']);
+        CheckExecution::factory()->create([
+            'team_id' => $team->id,
+            'check_id' => $check->id,
+            'outcome' => ProviderOutcome::Success,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk()
+            ->assertSee('Consulta CPF')
+            ->assertDontSee('Nenhuma consulta realizada ainda');
+    }
+
+    public function test_the_dashboard_shows_an_empty_state_when_there_are_no_recent_check_executions(): void
+    {
+        [$user, $team] = $this->memberOf();
+
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk()->assertSee('Nenhuma consulta realizada ainda');
+    }
+
+    public function test_the_dashboard_shows_the_teams_recent_wallet_transactions(): void
+    {
+        [$user, $team] = $this->memberOf();
+
+        $wallet = Wallet::factory()->create(['team_id' => $team->id]);
+
+        WalletTransaction::factory()->create([
+            'team_id' => $team->id,
+            'wallet_id' => $wallet->id,
+            'type' => WalletTransactionType::Recharge,
+            'description' => 'Recarga via Pix',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk()
+            ->assertSee('Recarga') // rótulo do tipo, ver WalletTransactionType no dashboard
+            ->assertDontSee('Nenhuma transação realizada ainda');
+    }
+
+    public function test_the_dashboard_shows_an_empty_state_when_there_are_no_recent_wallet_transactions(): void
+    {
+        [$user, $team] = $this->memberOf();
+
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertOk()->assertSee('Nenhuma transação realizada ainda');
     }
 
     /**
