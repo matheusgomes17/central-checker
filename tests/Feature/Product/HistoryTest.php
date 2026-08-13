@@ -15,7 +15,7 @@ use Modules\CheckerApi\Models\CheckExecution;
 use Tests\TestCase;
 
 /**
- * The "histórico de consultas" screen: a user's own past runs, with the raw
+ * The check history screen: a user's own past runs, with the raw
  * result opened only for its owner and the input always shown masked.
  *
  * The tenant scope is per-team, not per-user — a team can have several
@@ -23,9 +23,9 @@ use Tests\TestCase;
  * list. Both the listing and the view-result path add an explicit
  * `where('user_id', Auth::id())` on top of the tenant scope; this suite
  * exists to prove both halves, the same shape as the Fix 1 regression test in
- * ExecutarConsultaTest.
+ * ExecuteCheckScreenTest.
  */
-class HistoricoTest extends TestCase
+class HistoryTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -56,7 +56,7 @@ class HistoricoTest extends TestCase
 
         $this->actingAs($userA);
 
-        Livewire::test('pages::checker.historico')
+        Livewire::test('pages::checker.history')
             ->assertOk()
             ->assertSee('Consulta cadastral')
             ->assertSee('123******01')
@@ -80,7 +80,7 @@ class HistoricoTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.historico')
+        Livewire::test('pages::checker.history')
             ->assertOk()
             ->assertSee('123******01')
             ->assertDontSee('MARCADOR-SECRETO-98765');
@@ -103,14 +103,14 @@ class HistoricoTest extends TestCase
 
         $this->actingAs($userA);
 
-        Livewire::test('pages::checker.historico')
-            ->call('ver', $execution->id)
+        Livewire::test('pages::checker.history')
+            ->call('viewResult', $execution->id)
             ->assertSee('Fulano de Tal');
 
         $this->actingAs($userB);
 
-        Livewire::test('pages::checker.historico')
-            ->call('ver', $execution->id)
+        Livewire::test('pages::checker.history')
+            ->call('viewResult', $execution->id)
             ->assertDontSee('Fulano de Tal');
     }
 
@@ -138,10 +138,10 @@ class HistoricoTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.historico')
+        Livewire::test('pages::checker.history')
             ->assertOk()
-            ->assertDontSeeHtml('wire:click="ver('.$noData->id.')"')
-            ->assertDontSeeHtml('wire:click="ver('.$failed->id.')"');
+            ->assertDontSeeHtml('wire:click="viewResult('.$noData->id.')"')
+            ->assertDontSeeHtml('wire:click="viewResult('.$failed->id.')"');
     }
 
     public function test_empty_state_invites_the_user(): void
@@ -150,7 +150,7 @@ class HistoricoTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.historico')
+        Livewire::test('pages::checker.history')
             ->assertOk()
             ->assertSee('você ainda não rodou');
     }
@@ -169,7 +169,7 @@ class HistoricoTest extends TestCase
         $user->update(['current_team_id' => null]);
         $user->unsetRelation('currentTeam');
 
-        $response = $this->actingAs($user)->get(route('checker.historico'));
+        $response = $this->actingAs($user)->get(route('checker.history'));
 
         $response->assertForbidden();
     }

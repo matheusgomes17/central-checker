@@ -16,10 +16,10 @@ Route::view('/', 'welcome')->name('home');
 Route::middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function (): void {
         Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
-        Route::livewire('checker/executar', 'pages::checker.executar')->name('checker.executar');
-        Route::livewire('checker/carteira', 'pages::checker.carteira')->name('checker.carteira');
-        Route::livewire('checker/planos', 'pages::checker.planos')->name('checker.planos');
-        Route::livewire('checker/historico', 'pages::checker.historico')->name('checker.historico');
+        Route::livewire('checker/executar', 'pages::checker.execute')->name('checker.execute');
+        Route::livewire('checker/carteira', 'pages::checker.wallet')->name('checker.wallet');
+        Route::livewire('checker/planos', 'pages::checker.plans')->name('checker.plans');
+        Route::livewire('checker/historico', 'pages::checker.history')->name('checker.history');
     });
 
 Route::middleware(['auth'])->group(function (): void {

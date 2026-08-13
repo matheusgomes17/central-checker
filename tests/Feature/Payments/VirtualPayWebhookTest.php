@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Pagamentos;
+namespace Tests\Feature\Payments;
 
 use App\Models\PlanSubscription;
 use App\Models\Team;

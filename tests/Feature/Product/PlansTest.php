@@ -21,14 +21,14 @@ use Modules\Payments\Models\PaymentIntent;
 use Tests\TestCase;
 
 /**
- * The planos screen: current plan + status up front, the purchasable plans
+ * The plans screen: current plan + status up front, the purchasable plans
  * with their included consultas (allowance) below, subscribe via Pix.
  *
  * A second entry point to the same PurchasePlan action as
  * settings/⚡billing.blade.php — mirrors its subscribe()/downgrade-confirm
- * dance and CarteiraTest's gateway fake, no network in this suite either.
+ * dance and WalletTest's gateway fake, no network in this suite either.
  */
-class PlanosTest extends TestCase
+class PlansTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -36,7 +36,7 @@ class PlanosTest extends TestCase
     {
         parent::setUp();
 
-        // Mesmo bind de CarteiraTest/CreateRechargeTest: instância concreta
+        // Mesmo bind de WalletTest/CreateRechargeTest: instância concreta
         // de VirtualPayGateway, com a chamada HTTP interceptada por
         // Http::fake() em cada teste que precisa dela.
         app()->bind(PaymentGateway::class, fn (): VirtualPayGateway => new VirtualPayGateway('https://api.virtualpay.online/v2', 'cid', 'csecret'));
@@ -48,7 +48,7 @@ class PlanosTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.planos')
+        Livewire::test('pages::checker.plans')
             ->assertOk()
             ->assertSee('Free')
             ->assertSee('Sem assinatura');
@@ -58,22 +58,22 @@ class PlanosTest extends TestCase
     {
         [$user, $team] = $this->memberOf(TeamRole::Owner);
 
-        $checkComFranquia = Check::factory()->create(['name' => 'Consulta CPF']);
+        $checkWithAllowance = Check::factory()->create(['name' => 'Consulta CPF']);
         PlanCheck::factory()->create([
             'plan' => 'pro',
-            'check_id' => $checkComFranquia->id,
+            'check_id' => $checkWithAllowance->id,
             'quota' => 100,
         ]);
 
-        $checkIlimitado = Check::factory()->create(['name' => 'Consulta CNPJ']);
+        $unlimitedCheck = Check::factory()->create(['name' => 'Consulta CNPJ']);
         PlanCheck::factory()->unlimited()->create([
             'plan' => 'business',
-            'check_id' => $checkIlimitado->id,
+            'check_id' => $unlimitedCheck->id,
         ]);
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.planos')
+        Livewire::test('pages::checker.plans')
             ->assertOk()
             ->assertSee('Pro')
             ->assertSee('Business')
@@ -93,8 +93,8 @@ class PlanosTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.planos')
-            ->call('assinar', 'pro')
+        Livewire::test('pages::checker.plans')
+            ->call('subscribe', 'pro')
             ->assertHasNoErrors()
             ->assertSee('000201-plano-copia-e-cola');
 
@@ -118,8 +118,8 @@ class PlanosTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.planos')
-            ->call('assinar', 'pro')
+        Livewire::test('pages::checker.plans')
+            ->call('subscribe', 'pro')
             ->assertForbidden();
 
         Http::assertNothingSent();
@@ -141,15 +141,15 @@ class PlanosTest extends TestCase
 
         $this->actingAs($user);
 
-        $component = Livewire::test('pages::checker.planos')
-            ->call('assinar', 'pro')
+        $component = Livewire::test('pages::checker.plans')
+            ->call('subscribe', 'pro')
             ->assertHasNoErrors()
             ->assertSet('confirming', 'pro')
             ->assertSet('intentId', null);
 
         expect(PaymentIntent::acrossTenants()->count())->toBe(0);
 
-        $component->call('assinar', 'pro')
+        $component->call('subscribe', 'pro')
             ->assertHasNoErrors()
             ->assertSet('confirming', null);
 
@@ -164,8 +164,8 @@ class PlanosTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.planos')
-            ->call('assinar', 'inexistente')
+        Livewire::test('pages::checker.plans')
+            ->call('subscribe', 'inexistente')
             ->assertNotFound();
 
         Http::assertNothingSent();
@@ -177,7 +177,7 @@ class PlanosTest extends TestCase
      * "Cancelar" button needs `$set('confirming', null)` from the client),
      * so a tampered Livewire request can set it to a key that isn't in
      * Plan::purchasable(). The view must not crash indexing that away —
-     * assinar() already re-validates, but the render path has to guard too.
+     * subscribe() already re-validates, but the render path has to guard too.
      */
     public function test_setting_an_invalid_confirming_key_does_not_crash_the_page(): void
     {
@@ -185,7 +185,7 @@ class PlanosTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.planos')
+        Livewire::test('pages::checker.plans')
             ->set('confirming', 'inexistente')
             ->assertOk()
             ->assertSee('Free')
@@ -206,7 +206,7 @@ class PlanosTest extends TestCase
         $user->update(['current_team_id' => null]);
         $user->unsetRelation('currentTeam');
 
-        $response = $this->actingAs($user)->get(route('checker.planos'));
+        $response = $this->actingAs($user)->get(route('checker.plans'));
 
         $response->assertForbidden();
     }

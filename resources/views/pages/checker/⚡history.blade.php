@@ -19,10 +19,14 @@ new #[Title('Histórico de consultas')] class extends Component {
     use WithPagination;
 
     /**
-     * The execution open in the result panel. Set by {@see self::ver()},
+     * The execution open in the result panel. Set by {@see self::viewResult()},
      * but the property itself protects nothing — {@see self::selected()}
      * re-filters by user_id on every read, so a same-team teammate's id
      * resolves to null even with this set to it.
+     *
+     * Named `viewResult`, not `view` — Livewire\Component (via the compiled
+     * Volt anonymous class) already declares a protected `view()` method
+     * that renders the component; redeclaring it fatals.
      */
     #[Locked]
     public ?int $selectedId = null;
@@ -32,12 +36,12 @@ new #[Title('Histórico de consultas')] class extends Component {
         abort_unless($this->team() !== null, 404);
     }
 
-    public function ver(int $id): void
+    public function viewResult(int $id): void
     {
         $this->selectedId = $id;
     }
 
-    public function fechar(): void
+    public function close(): void
     {
         $this->selectedId = null;
     }
@@ -51,7 +55,7 @@ new #[Title('Histórico de consultas')] class extends Component {
      * @return LengthAwarePaginator<int, CheckExecution>
      */
     #[Computed]
-    public function execucoes(): LengthAwarePaginator
+    public function executions(): LengthAwarePaginator
     {
         return CheckExecution::query()
             ->where('user_id', Auth::id())
@@ -61,7 +65,7 @@ new #[Title('Histórico de consultas')] class extends Component {
     }
 
     #[Computed]
-    public function totalExecucoes(): int
+    public function totalExecutions(): int
     {
         return CheckExecution::query()->where('user_id', Auth::id())->count();
     }
@@ -69,7 +73,7 @@ new #[Title('Histórico de consultas')] class extends Component {
     /**
      * The open execution, scoped to its owner. This where('user_id', ...) —
      * not the #[Locked] attribute above — is the actual guard: it is what
-     * keeps a same-team teammate's crafted `ver($id)` call from resolving to
+     * keeps a same-team teammate's crafted `viewResult($id)` call from resolving to
      * anyone else's (encrypted, third-party PII) result.
      */
     #[Computed]
@@ -98,21 +102,21 @@ new #[Title('Histórico de consultas')] class extends Component {
             <p class="mt-1 text-sm text-white/55">{{ __('Suas consultas, com a entrada sempre mascarada. Só você vê o resultado de cada uma.') }}</p>
         </div>
 
-        @if ($this->totalExecucoes > 0)
+        @if ($this->totalExecutions > 0)
             <x-fire.stat
                 :label="__('Consultas executadas')"
-                :value="Number::format($this->totalExecucoes, locale: 'pt_BR')"
+                :value="Number::format($this->totalExecutions, locale: 'pt_BR')"
                 :hint="__('No total, por você')"
             />
         @endif
 
-        @if ($this->execucoes->isEmpty())
+        @if ($this->executions->isEmpty())
             <div class="rounded-xl border border-dashed border-fire-500/25 bg-white/2 p-6 text-center" data-test="historico-vazio">
                 <p class="font-display text-lg font-semibold text-white">{{ __('você ainda não rodou consultas') }}</p>
                 <p class="mt-1 text-sm text-white/55">{{ __('Execute a primeira e ela aparece aqui, com o resultado guardado só para você.') }}</p>
 
                 <flux:button
-                    :href="route('checker.executar')"
+                    :href="route('checker.execute')"
                     variant="primary"
                     icon="bolt"
                     wire:navigate
@@ -125,46 +129,46 @@ new #[Title('Histórico de consultas')] class extends Component {
         @else
             <div class="space-y-3">
                 <div class="rounded-xl border border-fire-500/14 bg-white/2 overflow-hidden">
-                    @foreach ($this->execucoes as $execucao)
+                    @foreach ($this->executions as $execution)
                         @php
-                            $rotuloOutcome = match ($execucao->outcome) {
+                            $outcomeLabel = match ($execution->outcome) {
                                 ProviderOutcome::Success => __('Sucesso'),
                                 ProviderOutcome::NoData => __('Sem registro'),
                                 ProviderOutcome::Failed => __('Falhou'),
                             };
 
-                            $corOutcome = match ($execucao->outcome) {
+                            $outcomeColor = match ($execution->outcome) {
                                 ProviderOutcome::Success => 'border-ok/30 bg-ok/10 text-ok',
                                 ProviderOutcome::NoData => 'border-white/14 bg-white/5 text-white/55',
                                 ProviderOutcome::Failed => 'border-flame-danger/30 bg-flame-danger/10 text-flame-danger',
                             };
 
-                            $entradaMascarada = collect($execucao->input_masked)
-                                ->map(fn (string $valor, string $campo): string => "{$campo}: {$valor}")
+                            $maskedInput = collect($execution->input_masked)
+                                ->map(fn (string $value, string $field): string => "{$field}: {$value}")
                                 ->implode(', ');
                         @endphp
 
                         <div
-                            wire:key="execucao-{{ $execucao->id }}"
+                            wire:key="execucao-{{ $execution->id }}"
                             class="flex flex-wrap items-center justify-between gap-4 p-4 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
-                            data-test="execucao-{{ $execucao->id }}"
+                            data-test="execucao-{{ $execution->id }}"
                         >
                             <div class="space-y-1">
                                 <div class="flex items-center gap-2">
-                                    <span class="font-display font-semibold text-white">{{ $execucao->check->name }}</span>
-                                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $corOutcome }}">
-                                        {{ $rotuloOutcome }}
+                                    <span class="font-display font-semibold text-white">{{ $execution->check->name }}</span>
+                                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $outcomeColor }}">
+                                        {{ $outcomeLabel }}
                                     </span>
                                 </div>
-                                <p class="font-mono text-xs text-white/55">{{ $entradaMascarada }}</p>
-                                <p class="text-xs text-white/40">{{ $execucao->created_at?->format('d/m/Y H:i') }}</p>
+                                <p class="font-mono text-xs text-white/55">{{ $maskedInput }}</p>
+                                <p class="text-xs text-white/40">{{ $execution->created_at?->format('d/m/Y H:i') }}</p>
                             </div>
 
-                            @if ($execucao->outcome === ProviderOutcome::Success)
+                            @if ($execution->outcome === ProviderOutcome::Success)
                                 <button
                                     type="button"
-                                    wire:click="ver({{ $execucao->id }})"
-                                    data-test="ver-resultado-{{ $execucao->id }}"
+                                    wire:click="viewResult({{ $execution->id }})"
+                                    data-test="ver-resultado-{{ $execution->id }}"
                                     class="inline-flex items-center gap-1.5 rounded-lg border border-fire-500/25 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:border-fire-500/50 hover:text-white"
                                 >
                                     <flux:icon.eye class="size-3.5" />
@@ -176,15 +180,15 @@ new #[Title('Histórico de consultas')] class extends Component {
                 </div>
 
                 <div data-test="historico-paginacao">
-                    {{ $this->execucoes->links() }}
+                    {{ $this->executions->links() }}
                 </div>
             </div>
         @endif
 
         @if ($this->selected)
             @php
-                $entradaSelecionada = collect($this->selected->input_masked)
-                    ->map(fn (string $valor, string $campo): string => "{$campo}: {$valor}")
+                $selectedMaskedInput = collect($this->selected->input_masked)
+                    ->map(fn (string $value, string $field): string => "{$field}: {$value}")
                     ->implode(', ');
             @endphp
 
@@ -201,7 +205,7 @@ new #[Title('Histórico de consultas')] class extends Component {
 
                     <button
                         type="button"
-                        wire:click="fechar"
+                        wire:click="close"
                         data-test="fechar-resultado"
                         class="text-xs text-white/55 transition hover:text-white"
                     >
@@ -209,13 +213,13 @@ new #[Title('Histórico de consultas')] class extends Component {
                     </button>
                 </div>
 
-                <p class="mt-2 font-mono text-xs text-white/55" data-test="entrada-selecionada">{{ $entradaSelecionada }}</p>
+                <p class="mt-2 font-mono text-xs text-white/55" data-test="entrada-selecionada">{{ $selectedMaskedInput }}</p>
 
                 <dl class="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-                    @foreach ($this->selected->result ?? [] as $campo => $valor)
+                    @foreach ($this->selected->result ?? [] as $field => $value)
                         <div>
-                            <dt class="text-xs text-white/55 capitalize">{{ str_replace('_', ' ', (string) $campo) }}</dt>
-                            <dd class="font-mono text-sm text-white">{{ is_scalar($valor) ? $valor : json_encode($valor) }}</dd>
+                            <dt class="text-xs text-white/55 capitalize">{{ str_replace('_', ' ', (string) $field) }}</dt>
+                            <dd class="font-mono text-sm text-white">{{ is_scalar($value) ? $value : json_encode($value) }}</dd>
                         </div>
                     @endforeach
                 </dl>

@@ -23,14 +23,14 @@ use Modules\Wallet\Models\Wallet;
 use Tests\TestCase;
 
 /**
- * The "executar consulta" screen: pick a check, type a single document
+ * The "execute a check" screen: pick a check, type a single document
  * field, run it, see the result and what it cost. Covers the input contract
  * (one field, digits + length only, no check-digit yet — see the closure
  * rule in the volt component for why), the exception-to-message mapping for
  * every way {@see ExecuteCheck::handle()} can refuse, and that checks in
  * maintenance stay visible instead of disappearing (D8).
  */
-class ExecutarConsultaTest extends TestCase
+class ExecuteCheckScreenTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -42,7 +42,7 @@ class ExecutarConsultaTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.executar')
+        Livewire::test('pages::checker.execute')
             ->assertOk()
             ->assertSee($check->name);
     }
@@ -56,10 +56,10 @@ class ExecutarConsultaTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.executar')
+        Livewire::test('pages::checker.execute')
             ->set('checkId', $check->id)
-            ->set('documento', '12345678909')
-            ->call('executar')
+            ->set('document', '12345678909')
+            ->call('execute')
             ->assertHasNoErrors()
             ->assertSee('Fulano de Tal');
 
@@ -78,11 +78,11 @@ class ExecutarConsultaTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.executar')
+        Livewire::test('pages::checker.execute')
             ->set('checkId', $check->id)
-            ->set('documento', 'abc123')
-            ->call('executar')
-            ->assertHasErrors(['documento']);
+            ->set('document', 'abc123')
+            ->call('execute')
+            ->assertHasErrors(['document']);
 
         expect(CheckExecution::query()->count())->toBe(0);
     }
@@ -96,10 +96,10 @@ class ExecutarConsultaTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.executar')
+        Livewire::test('pages::checker.execute')
             ->set('checkId', $check->id)
-            ->set('documento', '12345678909')
-            ->call('executar')
+            ->set('document', '12345678909')
+            ->call('execute')
             ->assertHasNoErrors()
             ->assertSee('nenhum registro');
 
@@ -123,10 +123,10 @@ class ExecutarConsultaTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.executar')
+        Livewire::test('pages::checker.execute')
             ->set('checkId', $check->id)
-            ->set('documento', '12345678909')
-            ->call('executar')
+            ->set('document', '12345678909')
+            ->call('execute')
             ->assertHasErrors(['checkId'])
             ->assertSee('Saldo insuficiente');
 
@@ -142,13 +142,13 @@ class ExecutarConsultaTest extends TestCase
 
         $this->actingAs($user);
 
-        $component = Livewire::test('pages::checker.executar')
+        $component = Livewire::test('pages::checker.execute')
             ->assertSee($check->name)
             ->assertSee('manutenção');
 
         $component->set('checkId', $check->id)
-            ->set('documento', '12345678909')
-            ->call('executar')
+            ->set('document', '12345678909')
+            ->call('execute')
             ->assertHasErrors(['checkId']);
 
         expect(CheckExecution::query()->count())->toBe(0);
@@ -181,10 +181,10 @@ class ExecutarConsultaTest extends TestCase
 
         $this->actingAs($memberB);
 
-        Livewire::test('pages::checker.executar')
+        Livewire::test('pages::checker.execute')
             ->set('checkId', $check->id)
-            ->set('documento', '12345678909')
-            ->call('executar')
+            ->set('document', '12345678909')
+            ->call('execute')
             ->assertHasNoErrors();
 
         $bExecution = CheckExecution::query()->sole();
@@ -197,7 +197,7 @@ class ExecutarConsultaTest extends TestCase
         $this->actingAs($memberA);
 
         try {
-            $component = Livewire::test('pages::checker.executar')
+            $component = Livewire::test('pages::checker.execute')
                 ->set('executionId', $bExecution->id);
         } catch (CannotUpdateLockedPropertyException $e) {
             expect($e->property)->toBe('executionId');
@@ -223,7 +223,7 @@ class ExecutarConsultaTest extends TestCase
         $user->update(['current_team_id' => null]);
         $user->unsetRelation('currentTeam');
 
-        $response = $this->actingAs($user)->get(route('checker.executar'));
+        $response = $this->actingAs($user)->get(route('checker.execute'));
 
         $response->assertForbidden();
     }

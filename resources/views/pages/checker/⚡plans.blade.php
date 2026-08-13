@@ -24,7 +24,7 @@ use Modules\Payments\Support\PayerData;
 
 new #[Title('Planos')] class extends Component {
     /**
-     * Id of the Pix intent opened by {@see self::assinar()}, set only
+     * Id of the Pix intent opened by {@see self::subscribe()}, set only
      * server-side. Locked so a crafted Livewire request can't swap it for
      * another team's intent id — the intent itself is team-scoped, but the
      * id alone shouldn't be attacker-controlled.
@@ -34,7 +34,7 @@ new #[Title('Planos')] class extends Component {
 
     /**
      * Key of the plan waiting for downgrade confirmation, set only
-     * server-side inside {@see self::assinar()} — always re-validated
+     * server-side inside {@see self::subscribe()} — always re-validated
      * against Plan::purchasable() before use, never trusted as-is.
      */
     public ?string $confirming = null;
@@ -57,7 +57,7 @@ new #[Title('Planos')] class extends Component {
      */
     public function updatedConfirming(): void
     {
-        if ($this->confirming !== null && ! array_key_exists($this->confirming, $this->planos())) {
+        if ($this->confirming !== null && ! array_key_exists($this->confirming, $this->plans())) {
             $this->confirming = null;
         }
     }
@@ -69,11 +69,11 @@ new #[Title('Planos')] class extends Component {
      * The subscription only activates once the webhook confirms the payment
      * landed — this only ever opens the charge.
      */
-    public function assinar(string $key): void
+    public function subscribe(string $key): void
     {
         abort_unless($this->canManage, 403);
 
-        $plan = $this->planos()[$key] ?? abort(404);
+        $plan = $this->plans()[$key] ?? abort(404);
 
         if ($this->wouldLeaveTeamOverTheCeiling($plan) && $this->confirming !== $key) {
             $this->confirming = $key;
@@ -107,7 +107,7 @@ new #[Title('Planos')] class extends Component {
      * @return array<string, Plan>
      */
     #[Computed]
-    public function planos(): array
+    public function plans(): array
     {
         return Plan::purchasable();
     }
@@ -119,15 +119,15 @@ new #[Title('Planos')] class extends Component {
      * @return array<string, Collection<int, PlanCheck>>
      */
     #[Computed]
-    public function incluidas(): array
+    public function includedChecks(): array
     {
-        $incluidas = [];
+        $includedChecks = [];
 
-        foreach (array_keys($this->planos()) as $key) {
-            $incluidas[$key] = PlanCheck::query()->where('plan', $key)->with('check')->get();
+        foreach (array_keys($this->plans()) as $key) {
+            $includedChecks[$key] = PlanCheck::query()->where('plan', $key)->with('check')->get();
         }
 
-        return $incluidas;
+        return $includedChecks;
     }
 
     /**
@@ -150,7 +150,7 @@ new #[Title('Planos')] class extends Component {
      * Null when there is no active subscription — mirrors ⚡dashboard.blade.php.
      */
     #[Computed]
-    public function diasRestantes(): ?int
+    public function daysRemaining(): ?int
     {
         $subscription = $this->subscription();
 
@@ -174,7 +174,7 @@ new #[Title('Planos')] class extends Component {
     /**
      * Whether the team already uses more seats than a plan would allow.
      *
-     * Reads TeamBilling::usage() directly, not the per-check incluidas()
+     * Reads TeamBilling::usage() directly, not the per-check includedChecks()
      * list above — that one is shaped for the included-consultas display,
      * not for reading the members ceiling.
      */
@@ -205,7 +205,7 @@ new #[Title('Planos')] class extends Component {
             <x-fire.plan-timer
                 class="mt-4"
                 :label="__('Período pago')"
-                :daysLeft="$this->diasRestantes"
+                :daysLeft="$this->daysRemaining"
             />
 
             @if ($this->billing->onTrial())
@@ -225,7 +225,7 @@ new #[Title('Planos')] class extends Component {
             <flux:heading size="sm">{{ __('Planos disponíveis') }}</flux:heading>
 
             <div class="grid gap-4 sm:grid-cols-2">
-                @foreach ($this->planos as $key => $plano)
+                @foreach ($this->plans as $key => $plan)
                     <div
                         wire:key="plano-{{ $key }}"
                         class="flex flex-col gap-4 rounded-xl border border-fire-500/14 bg-white/2 p-6"
@@ -233,14 +233,14 @@ new #[Title('Planos')] class extends Component {
                     >
                         <div>
                             <div class="flex items-center justify-between gap-2">
-                                <flux:heading size="sm">{{ $plano->name }}</flux:heading>
+                                <flux:heading size="sm">{{ $plan->name }}</flux:heading>
 
                                 @if ($this->billing->plan()->key === $key)
                                     <flux:badge size="sm" color="green">{{ __('Plano atual') }}</flux:badge>
                                 @endif
                             </div>
                             <p class="font-mono text-2xl font-semibold text-white">
-                                {{ Number::currency($plano->price / 100, in: 'BRL', locale: 'pt_BR') }}
+                                {{ Number::currency($plan->price / 100, in: 'BRL', locale: 'pt_BR') }}
                                 <span class="text-sm font-normal text-white/55">{{ __('/mês') }}</span>
                             </p>
                         </div>
@@ -248,11 +248,11 @@ new #[Title('Planos')] class extends Component {
                         <div class="space-y-1.5 border-t border-fire-500/14 pt-4">
                             <p class="text-xs font-medium tracking-widest text-white/55 uppercase">{{ __('Consultas incluídas') }}</p>
 
-                            @forelse ($this->incluidas[$key] as $incluida)
+                            @forelse ($this->includedChecks[$key] as $includedCheck)
                                 <div class="flex items-center justify-between gap-4 text-sm" data-test="plano-{{ $key }}-consulta">
-                                    <span class="text-white/80">{{ $incluida->check->name }}</span>
+                                    <span class="text-white/80">{{ $includedCheck->check->name }}</span>
                                     <span class="font-mono text-white/55">
-                                        {{ $incluida->isUnlimited() ? __('ilimitado') : __(':quota/mês', ['quota' => $incluida->quota]) }}
+                                        {{ $includedCheck->isUnlimited() ? __('ilimitado') : __(':quota/mês', ['quota' => $includedCheck->quota]) }}
                                     </span>
                                 </div>
                             @empty
@@ -263,36 +263,36 @@ new #[Title('Planos')] class extends Component {
                         @if ($this->canManage && $this->billing->plan()->key !== $key)
                             <button
                                 type="button"
-                                wire:click="assinar('{{ $key }}')"
+                                wire:click="subscribe('{{ $key }}')"
                                 wire:loading.attr="disabled"
-                                wire:target="assinar('{{ $key }}')"
+                                wire:target="subscribe('{{ $key }}')"
                                 data-test="plano-assinar-{{ $key }}"
                                 class="mt-auto inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fire-400 via-fire-500 to-fire-600 px-5 font-display text-sm font-semibold text-white shadow-[0_0_20px_-4px_rgb(255_107_0_/_60%)] transition motion-safe:hover:scale-[1.01] motion-safe:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                <flux:icon.fire wire:loading.remove wire:target="assinar('{{ $key }}')" class="size-4" />
-                                <flux:icon.loading wire:loading wire:target="assinar('{{ $key }}')" class="size-4" />
-                                <span wire:loading.remove wire:target="assinar('{{ $key }}')">
-                                    {{ $this->billing->subscribed() ? __('Renovar :plano', ['plano' => $plano->name]) : __('Assinar :plano', ['plano' => $plano->name]) }}
+                                <flux:icon.fire wire:loading.remove wire:target="subscribe('{{ $key }}')" class="size-4" />
+                                <flux:icon.loading wire:loading wire:target="subscribe('{{ $key }}')" class="size-4" />
+                                <span wire:loading.remove wire:target="subscribe('{{ $key }}')">
+                                    {{ $this->billing->subscribed() ? __('Renovar :plano', ['plano' => $plan->name]) : __('Assinar :plano', ['plano' => $plan->name]) }}
                                 </span>
-                                <span wire:loading wire:target="assinar('{{ $key }}')">{{ __('Gerando…') }}</span>
+                                <span wire:loading wire:target="subscribe('{{ $key }}')">{{ __('Gerando…') }}</span>
                             </button>
                         @endif
                     </div>
                 @endforeach
             </div>
 
-            @php($planoConfirmando = $this->confirming !== null ? ($this->planos[$this->confirming] ?? null) : null)
-            @if ($planoConfirmando)
+            @php($confirmingPlan = $this->confirming !== null ? ($this->plans[$this->confirming] ?? null) : null)
+            @if ($confirmingPlan)
                 <flux:callout variant="warning" icon="exclamation-triangle" data-test="downgrade-confirm">
                     <flux:callout.heading>{{ __('Este plano é menor que o uso atual') }}</flux:callout.heading>
                     <flux:callout.text>
                         {{ __(':usados de :limite membros em uso. Ninguém é removido, e ninguém novo entra até que vagas sejam liberadas.', [
                             'usados' => $this->billing->usage('members')['used'],
-                            'limite' => $planoConfirmando->limit('members'),
+                            'limite' => $confirmingPlan->limit('members'),
                         ]) }}
                     </flux:callout.text>
                     <x-slot name="actions">
-                        <flux:button wire:click="assinar('{{ $planoConfirmando->key }}')" variant="danger" size="sm" data-test="downgrade-confirm-button">
+                        <flux:button wire:click="subscribe('{{ $confirmingPlan->key }}')" variant="danger" size="sm" data-test="downgrade-confirm-button">
                             {{ __('Trocar mesmo assim') }}
                         </flux:button>
                         <flux:button wire:click="$set('confirming', null)" variant="ghost" size="sm">{{ __('Cancelar') }}</flux:button>

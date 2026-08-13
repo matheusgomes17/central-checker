@@ -193,7 +193,7 @@ new #[Title('Dashboard')] class extends Component {
                 </span>
 
                 <flux:button
-                    :href="route('checker.executar')"
+                    :href="route('checker.execute')"
                     variant="primary"
                     icon="bolt"
                     wire:navigate

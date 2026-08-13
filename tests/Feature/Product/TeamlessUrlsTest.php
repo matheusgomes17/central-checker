@@ -69,9 +69,9 @@ class TeamlessUrlsTest extends TestCase
 
     public function test_checker_routes_have_no_team_segment(): void
     {
-        expect(route('checker.executar', absolute: false))->toBe('/checker/executar')
-            ->and(route('checker.carteira', absolute: false))->toBe('/checker/carteira')
-            ->and(route('checker.planos', absolute: false))->toBe('/checker/planos')
-            ->and(route('checker.historico', absolute: false))->toBe('/checker/historico');
+        expect(route('checker.execute', absolute: false))->toBe('/checker/executar')
+            ->and(route('checker.wallet', absolute: false))->toBe('/checker/carteira')
+            ->and(route('checker.plans', absolute: false))->toBe('/checker/planos')
+            ->and(route('checker.history', absolute: false))->toBe('/checker/historico');
     }
 }

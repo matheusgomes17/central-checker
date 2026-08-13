@@ -70,10 +70,10 @@ class RouteAuthorizationTest extends TestCase
         // Agem sobre quem está autenticado: o recurso é a própria pessoa, e não
         // existe identificador de outra para autorizar contra.
         'dashboard' => 'o escopo de time vem do middleware de membership',
-        'checker.executar' => 'o escopo de time vem do middleware de membership',
-        'checker.carteira' => 'o escopo de time vem do middleware de membership; recarregar() exige ManageBilling',
-        'checker.planos' => 'o escopo de time vem do middleware de membership; assinar() exige ManageBilling',
-        'checker.historico' => 'o escopo de time vem do middleware de membership; execucoes() e selected() filtram por user_id',
+        'checker.execute' => 'o escopo de time vem do middleware de membership',
+        'checker.wallet' => 'o escopo de time vem do middleware de membership; recharge() exige ManageBilling',
+        'checker.plans' => 'o escopo de time vem do middleware de membership; subscribe() exige ManageBilling',
+        'checker.history' => 'o escopo de time vem do middleware de membership; executions() e selected() filtram por user_id',
         'profile.edit' => 'edita a própria conta',
         'security.edit' => 'edita a própria segurança',
         'appearance.edit' => 'preferência da própria conta',

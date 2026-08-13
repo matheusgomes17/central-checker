@@ -67,7 +67,7 @@ class DashboardTest extends TestCase
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
-        $response->assertOk()->assertSee(route('checker.carteira'), false);
+        $response->assertOk()->assertSee(route('checker.wallet'), false);
     }
 
     public function test_a_member_sees_a_link_to_the_planos(): void
@@ -78,7 +78,7 @@ class DashboardTest extends TestCase
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
-        $response->assertOk()->assertSee(route('checker.planos'), false);
+        $response->assertOk()->assertSee(route('checker.plans'), false);
     }
 
     public function test_a_member_sees_a_link_to_the_historico(): void
@@ -89,7 +89,7 @@ class DashboardTest extends TestCase
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 
-        $response->assertOk()->assertSee(route('checker.historico'), false);
+        $response->assertOk()->assertSee(route('checker.history'), false);
     }
 
     public function test_a_member_sees_a_link_to_the_profile(): void
@@ -164,10 +164,10 @@ class DashboardTest extends TestCase
 
         $response->assertOk()
             ->assertSeeHtml('data-test="sidebar-dashboard"')
-            ->assertSeeHtml('data-test="sidebar-checker.executar"')
-            ->assertSeeHtml('data-test="sidebar-checker.carteira"')
-            ->assertSeeHtml('data-test="sidebar-checker.planos"')
-            ->assertSeeHtml('data-test="sidebar-checker.historico"')
+            ->assertSeeHtml('data-test="sidebar-checker.execute"')
+            ->assertSeeHtml('data-test="sidebar-checker.wallet"')
+            ->assertSeeHtml('data-test="sidebar-checker.plans"')
+            ->assertSeeHtml('data-test="sidebar-checker.history"')
             ->assertSeeHtml('data-test="sidebar-profile.edit"');
     }
 

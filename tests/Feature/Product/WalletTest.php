@@ -23,7 +23,7 @@ use Modules\Wallet\Models\WalletTransaction;
 use Tests\TestCase;
 
 /**
- * The carteira screen: balance up front, recharge via Pix below it. Covers
+ * The wallet screen: balance up front, recharge via Pix below it. Covers
  * the balance readout, opening a Recharge PaymentIntent (never crediting the
  * wallet directly — only the webhook does that, see CreateRecharge), the
  * amount guardrails, and the ManageBilling gate on the recharge action.
@@ -31,7 +31,7 @@ use Tests\TestCase;
  * Mirrors settings/⚡billing.blade.php's Pix pattern and CreateRechargeTest's
  * gateway fake — no network in this suite either.
  */
-class CarteiraTest extends TestCase
+class WalletTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -55,7 +55,7 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
+        Livewire::test('pages::checker.wallet')
             ->assertOk()
             ->assertSee((string) Number::currency(5432.10, in: 'BRL', locale: 'pt_BR'));
     }
@@ -71,9 +71,9 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
-            ->set('valor', '50,00')
-            ->call('recarregar')
+        Livewire::test('pages::checker.wallet')
+            ->set('amount', '50,00')
+            ->call('recharge')
             ->assertHasNoErrors()
             ->assertSee('000201-copia-e-cola')
             ->assertSee('base64qr==', false);
@@ -98,10 +98,10 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
-            ->set('valor', '1')
-            ->call('recarregar')
-            ->assertHasErrors(['valor']);
+        Livewire::test('pages::checker.wallet')
+            ->set('amount', '1')
+            ->call('recharge')
+            ->assertHasErrors(['amount']);
 
         Http::assertNothingSent();
         expect(PaymentIntent::acrossTenants()->count())->toBe(0);
@@ -116,18 +116,18 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
-            ->set('valor', 'abc')
-            ->call('recarregar')
-            ->assertHasErrors(['valor']);
+        Livewire::test('pages::checker.wallet')
+            ->set('amount', 'abc')
+            ->call('recharge')
+            ->assertHasErrors(['amount']);
 
         Http::assertNothingSent();
         expect(PaymentIntent::acrossTenants()->count())->toBe(0);
 
-        Livewire::test('pages::checker.carteira')
-            ->set('valor', '')
-            ->call('recarregar')
-            ->assertHasErrors(['valor']);
+        Livewire::test('pages::checker.wallet')
+            ->set('amount', '')
+            ->call('recharge')
+            ->assertHasErrors(['amount']);
 
         expect(PaymentIntent::acrossTenants()->count())->toBe(0);
     }
@@ -142,9 +142,9 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
-            ->set('valor', '50,00')
-            ->call('recarregar')
+        Livewire::test('pages::checker.wallet')
+            ->set('amount', '50,00')
+            ->call('recharge')
             ->assertForbidden();
 
         Http::assertNothingSent();
@@ -165,7 +165,7 @@ class CarteiraTest extends TestCase
         $user->update(['current_team_id' => null]);
         $user->unsetRelation('currentTeam');
 
-        $response = $this->actingAs($user)->get(route('checker.carteira'));
+        $response = $this->actingAs($user)->get(route('checker.wallet'));
 
         $response->assertForbidden();
     }
@@ -205,7 +205,7 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
+        Livewire::test('pages::checker.wallet')
             ->assertSee('Recarga via Pix')
             ->assertSee('Consulta CPF')
             ->assertSee((string) Number::currency(50, in: 'BRL', locale: 'pt_BR'))
@@ -242,7 +242,7 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
+        Livewire::test('pages::checker.wallet')
             ->assertSee((string) Number::currency(50, in: 'BRL', locale: 'pt_BR'))
             ->assertSee((string) Number::currency(30, in: 'BRL', locale: 'pt_BR'))
             ->assertDontSee((string) Number::currency(99, in: 'BRL', locale: 'pt_BR'));
@@ -272,7 +272,7 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
+        Livewire::test('pages::checker.wallet')
             ->assertSee((string) Number::currency(77, in: 'BRL', locale: 'pt_BR'))
             ->assertDontSee((string) Number::currency(88, in: 'BRL', locale: 'pt_BR'));
     }
@@ -284,7 +284,7 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
+        Livewire::test('pages::checker.wallet')
             ->assertSee('Nenhum lançamento ainda')
             ->assertSee('Nenhuma recarga ainda');
     }
@@ -300,9 +300,9 @@ class CarteiraTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test('pages::checker.carteira')
-            ->set('valor', '10,50')
-            ->call('recarregar')
+        Livewire::test('pages::checker.wallet')
+            ->set('amount', '10,50')
+            ->call('recharge')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('payment_intents', [

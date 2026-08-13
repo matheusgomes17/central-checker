@@ -25,11 +25,11 @@ use Modules\Payments\Models\PaymentIntent;
 use Modules\Payments\Support\PayerData;
 
 new #[Title('Carteira')] class extends Component {
-    public string $valor = '';
+    public string $amount = '';
 
     /**
      * Id of the PaymentIntent this recharge opened, set only server-side
-     * inside {@see self::recarregar()}. Locked so a crafted Livewire request
+     * inside {@see self::recharge()}. Locked so a crafted Livewire request
      * can't swap it for another team's intent id — the intent itself is
      * team-scoped, but the id alone shouldn't be attacker-controlled.
      */
@@ -50,25 +50,25 @@ new #[Title('Carteira')] class extends Component {
      * Opens a Pix charge for a wallet recharge. Never credits the wallet —
      * only the webhook does that, once the payment is confirmed.
      */
-    public function recarregar(): void
+    public function recharge(): void
     {
         abort_unless($this->canManage, 403);
 
         $this->validate([
-            'valor' => ['required', function (string $attribute, mixed $value, Closure $fail): void {
-                if (! is_numeric($this->valorNormalizado($value)) || (float) $this->valorNormalizado($value) <= 0) {
+            'amount' => ['required', function (string $attribute, mixed $value, Closure $fail): void {
+                if (! is_numeric($this->normalizedAmount($value)) || (float) $this->normalizedAmount($value) <= 0) {
                     $fail(__('Informe um valor válido.'));
                 }
             }],
         ]);
 
-        $cents = (int) round(((float) $this->valorNormalizado($this->valor)) * 100);
+        $cents = (int) round(((float) $this->normalizedAmount($this->amount)) * 100);
         $user = Auth::user();
 
         try {
             $intent = resolve(CreateRecharge::class)->handle($this->team(), $cents, PayerData::for($user->name, $user->email));
         } catch (RechargeAmountException) {
-            $this->addError('valor', __('Escolha um valor entre :min e :max.', [
+            $this->addError('amount', __('Escolha um valor entre :min e :max.', [
                 'min' => Number::currency($this->minCents / 100, in: 'BRL', locale: 'pt_BR'),
                 'max' => Number::currency($this->maxCents / 100, in: 'BRL', locale: 'pt_BR'),
             ]));
@@ -82,7 +82,7 @@ new #[Title('Carteira')] class extends Component {
     }
 
     #[Computed]
-    public function saldo(): int
+    public function balance(): int
     {
         return Wallet::forTeam($this->team())->balance_cents;
     }
@@ -116,7 +116,7 @@ new #[Title('Carteira')] class extends Component {
      * @return Collection<int, WalletTransaction>
      */
     #[Computed]
-    public function razao(): Collection
+    public function ledger(): Collection
     {
         return WalletTransaction::query()->latest()->limit(20)->get();
     }
@@ -128,7 +128,7 @@ new #[Title('Carteira')] class extends Component {
      * @return Collection<int, PaymentIntent>
      */
     #[Computed]
-    public function recargas(): Collection
+    public function recharges(): Collection
     {
         return PaymentIntent::acrossTenants()
             ->where('team_id', $this->team()->id)
@@ -154,9 +154,9 @@ new #[Title('Carteira')] class extends Component {
      * dot so (float) parses the whole value — a plain (float) cast on the
      * raw string stops at the comma and silently drops the cents.
      */
-    private function valorNormalizado(string $valor): string
+    private function normalizedAmount(string $amount): string
     {
-        return str_replace(',', '.', trim($valor));
+        return str_replace(',', '.', trim($amount));
     }
 
     private function team(): ?Team
@@ -175,7 +175,7 @@ new #[Title('Carteira')] class extends Component {
 
         <x-fire.stat
             :label="__('Saldo disponível')"
-            :value="Number::currency($this->saldo / 100, in: 'BRL', locale: 'pt_BR')"
+            :value="Number::currency($this->balance / 100, in: 'BRL', locale: 'pt_BR')"
             :hint="__('Descontado a cada consulta executada')"
             tone="fire"
         />
@@ -184,12 +184,12 @@ new #[Title('Carteira')] class extends Component {
             <div class="space-y-3">
                 <flux:heading size="sm">{{ __('Recarregar via Pix') }}</flux:heading>
 
-                <form wire:submit="recarregar" class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <form wire:submit="recharge" class="flex flex-col gap-4 sm:flex-row sm:items-end">
                     <div class="flex-1">
                         <flux:input.group>
                             <flux:input.group.prefix>{{ __('R$') }}</flux:input.group.prefix>
                             <flux:input
-                                wire:model="valor"
+                                wire:model="amount"
                                 :label="__('Valor da recarga')"
                                 placeholder="50,00"
                                 inputmode="decimal"
@@ -205,7 +205,7 @@ new #[Title('Carteira')] class extends Component {
                             ]) }}
                         </p>
 
-                        @error('valor')
+                        @error('amount')
                             <p class="mt-1 text-sm text-flame-danger" data-test="erro-valor">{{ $message }}</p>
                         @enderror
                     </div>
@@ -215,14 +215,14 @@ new #[Title('Carteira')] class extends Component {
                     <button
                         type="submit"
                         wire:loading.attr="disabled"
-                        wire:target="recarregar"
+                        wire:target="recharge"
                         data-test="gerar-pix"
                         class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fire-400 via-fire-500 to-fire-600 px-5 font-display text-sm font-semibold text-white shadow-[0_0_20px_-4px_rgb(255_107_0_/_60%)] transition motion-safe:hover:scale-[1.01] motion-safe:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        <flux:icon.qr-code wire:loading.remove wire:target="recarregar" class="size-4" />
-                        <flux:icon.loading wire:loading wire:target="recarregar" class="size-4" />
-                        <span wire:loading.remove wire:target="recarregar">{{ __('Gerar Pix') }}</span>
-                        <span wire:loading wire:target="recarregar">{{ __('Gerando…') }}</span>
+                        <flux:icon.qr-code wire:loading.remove wire:target="recharge" class="size-4" />
+                        <flux:icon.loading wire:loading wire:target="recharge" class="size-4" />
+                        <span wire:loading.remove wire:target="recharge">{{ __('Gerar Pix') }}</span>
+                        <span wire:loading wire:target="recharge">{{ __('Gerando…') }}</span>
                     </button>
                 </form>
             </div>
@@ -306,10 +306,10 @@ new #[Title('Carteira')] class extends Component {
             <flux:heading size="sm">{{ __('Razão') }}</flux:heading>
 
             <div class="rounded-xl border border-fire-500/14 bg-white/2 overflow-hidden">
-                @forelse ($this->razao as $lancamento)
+                @forelse ($this->ledger as $entry)
                     @php
-                        $credito = $lancamento->type->isCredit();
-                        $rotuloTipo = match ($lancamento->type) {
+                        $isCredit = $entry->type->isCredit();
+                        $typeLabel = match ($entry->type) {
                             WalletTransactionType::Recharge => __('Recarga'),
                             WalletTransactionType::Charge => __('Cobrança'),
                             WalletTransactionType::Refund => __('Estorno'),
@@ -318,26 +318,26 @@ new #[Title('Carteira')] class extends Component {
                         };
                     @endphp
                     <div
-                        wire:key="razao-{{ $lancamento->id }}"
+                        wire:key="razao-{{ $entry->id }}"
                         class="flex items-center justify-between gap-4 p-4 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
                         data-test="razao-linha"
                     >
                         <div class="space-y-1">
                             <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $credito ? 'border-ok/30 bg-ok/10 text-ok' : 'border-fire-500/30 bg-fire-500/10 text-fire-400' }}">
-                                    {{ $rotuloTipo }}
+                                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $isCredit ? 'border-ok/30 bg-ok/10 text-ok' : 'border-fire-500/30 bg-fire-500/10 text-fire-400' }}">
+                                    {{ $typeLabel }}
                                 </span>
-                                <span class="text-sm text-white/80">{{ $lancamento->description }}</span>
+                                <span class="text-sm text-white/80">{{ $entry->description }}</span>
                             </div>
-                            <p class="text-xs text-white/40">{{ $lancamento->created_at->format('d/m/Y H:i') }}</p>
+                            <p class="text-xs text-white/40">{{ $entry->created_at->format('d/m/Y H:i') }}</p>
                         </div>
 
                         <div class="text-right">
-                            <p class="font-mono text-sm {{ $credito ? 'text-ok' : 'text-fire-400' }}" data-test="razao-valor">
-                                {{ $credito ? '+' : '−' }} {{ Number::currency(abs($lancamento->amount_cents) / 100, in: 'BRL', locale: 'pt_BR') }}
+                            <p class="font-mono text-sm {{ $isCredit ? 'text-ok' : 'text-fire-400' }}" data-test="razao-valor">
+                                {{ $isCredit ? '+' : '−' }} {{ Number::currency(abs($entry->amount_cents) / 100, in: 'BRL', locale: 'pt_BR') }}
                             </p>
                             <p class="text-xs text-white/40">
-                                {{ __('Saldo:') }} {{ Number::currency($lancamento->balance_after_cents / 100, in: 'BRL', locale: 'pt_BR') }}
+                                {{ __('Saldo:') }} {{ Number::currency($entry->balance_after_cents / 100, in: 'BRL', locale: 'pt_BR') }}
                             </p>
                         </div>
                     </div>
@@ -353,21 +353,21 @@ new #[Title('Carteira')] class extends Component {
             <flux:heading size="sm">{{ __('Recargas') }}</flux:heading>
 
             <div class="rounded-xl border border-fire-500/14 bg-white/2 overflow-hidden">
-                @forelse ($this->recargas as $recarga)
+                @forelse ($this->recharges as $recharge)
                     <div
-                        wire:key="recarga-{{ $recarga->id }}"
+                        wire:key="recarga-{{ $recharge->id }}"
                         class="flex items-center justify-between gap-4 p-4 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
                         data-test="recarga-linha"
                     >
                         <div class="space-y-1">
-                            <p class="text-sm text-white/80">{{ $recarga->created_at->format('d/m/Y') }}</p>
-                            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $recarga->status === PaymentStatus::Paid ? 'border-ok/30 bg-ok/10 text-ok' : 'border-white/14 bg-white/5 text-white/55' }}">
-                                {{ $recarga->status === PaymentStatus::Paid ? __('Paga') : __('Pendente') }}
+                            <p class="text-sm text-white/80">{{ $recharge->created_at->format('d/m/Y') }}</p>
+                            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $recharge->status === PaymentStatus::Paid ? 'border-ok/30 bg-ok/10 text-ok' : 'border-white/14 bg-white/5 text-white/55' }}">
+                                {{ $recharge->status === PaymentStatus::Paid ? __('Paga') : __('Pendente') }}
                             </span>
                         </div>
 
                         <p class="font-mono text-sm text-white" data-test="recarga-valor">
-                            {{ Number::currency($recarga->amount_cents / 100, in: 'BRL', locale: 'pt_BR') }}
+                            {{ Number::currency($recharge->amount_cents / 100, in: 'BRL', locale: 'pt_BR') }}
                         </p>
                     </div>
                 @empty

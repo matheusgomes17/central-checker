@@ -27,10 +27,10 @@ use Modules\CheckerApi\Support\CheckInput;
 new #[Title('Executar consulta')] class extends Component {
     public ?int $checkId = null;
 
-    public string $documento = '';
+    public string $document = '';
 
     /**
-     * Set only server-side, inside {@see self::executar()}, once a run
+     * Set only server-side, inside {@see self::execute()}, once a run
      * succeeds. Locked so a crafted Livewire request can't swap it for a
      * sibling team member's execution id and read their (decrypted) result.
      */
@@ -47,21 +47,21 @@ new #[Title('Executar consulta')] class extends Component {
      * exception {@see ExecuteCheck::handle()} can throw into a friendly
      * field error — the raw exception message never reaches the screen.
      */
-    public function executar(): void
+    public function execute(): void
     {
         $this->executionId = null;
 
         $this->validate([
             'checkId' => ['required', 'integer'],
-            'documento' => ['required', function (string $attribute, mixed $value, Closure $fail): void {
-                $digitos = preg_replace('/\D/', '', (string) $value) ?? '';
+            'document' => ['required', function (string $attribute, mixed $value, Closure $fail): void {
+                $digits = preg_replace('/\D/', '', (string) $value) ?? '';
 
                 // Só dígitos + comprimento (11 = CPF, 14 = CNPJ). Nenhum
                 // provedor real existe ainda para exigir o dígito verificador
                 // — adicionar aquele validador agora seria complexidade sem
                 // uso (YAGNI); fica para quando um provedor de verdade
                 // precisar da validação completa.
-                if (! in_array(strlen($digitos), [11, 14], true)) {
+                if (! in_array(strlen($digits), [11, 14], true)) {
                     $fail(__('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos).'));
                 }
             }],
@@ -77,8 +77,8 @@ new #[Title('Executar consulta')] class extends Component {
             return;
         }
 
-        $digitos = preg_replace('/\D/', '', $this->documento) ?? '';
-        $input = CheckInput::fromArray(['documento' => $digitos]);
+        $digits = preg_replace('/\D/', '', $this->document) ?? '';
+        $input = CheckInput::fromArray(['documento' => $digits]);
 
         try {
             $execution = resolve(ExecuteCheck::class)->handle($check, $input, Auth::user());
@@ -111,7 +111,7 @@ new #[Title('Executar consulta')] class extends Component {
      * @return Collection<int, array{check: Check, available: bool}>
      */
     #[Computed]
-    public function consultas(): Collection
+    public function checks(): Collection
     {
         $availability = resolve(CheckAvailability::class);
 
@@ -146,7 +146,7 @@ new #[Title('Executar consulta')] class extends Component {
      * "not charged" for the two outcomes that never bill.
      */
     #[Computed]
-    public function custoLabel(): ?string
+    public function costLabel(): ?string
     {
         $execution = $this->execution;
 
@@ -172,7 +172,7 @@ new #[Title('Executar consulta')] class extends Component {
     }
 
     #[Computed]
-    public function saldoCents(): int
+    public function balanceCents(): int
     {
         return Wallet::forTeam($this->team())->balance_cents;
     }
@@ -195,7 +195,7 @@ new #[Title('Executar consulta')] class extends Component {
             <flux:heading size="sm">{{ __('Consulta') }}</flux:heading>
 
             <div class="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="{{ __('Escolha a consulta') }}">
-                @foreach ($this->consultas as $entry)
+                @foreach ($this->checks as $entry)
                     @php
                         $check = $entry['check'];
                         $selected = $checkId === $check->id;
@@ -230,7 +230,7 @@ new #[Title('Executar consulta')] class extends Component {
                     </button>
                 @endforeach
 
-                @if ($this->consultas->isEmpty())
+                @if ($this->checks->isEmpty())
                     <p class="text-sm text-white/55" data-test="sem-consultas">{{ __('Nenhuma consulta disponível no momento.') }}</p>
                 @endif
             </div>
@@ -240,10 +240,10 @@ new #[Title('Executar consulta')] class extends Component {
             @enderror
         </div>
 
-        <form wire:submit="executar" class="flex flex-col gap-4 sm:flex-row sm:items-end">
+        <form wire:submit="execute" class="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div class="flex-1">
                 <flux:input
-                    wire:model="documento"
+                    wire:model="document"
                     :label="__('Documento (CPF ou CNPJ)')"
                     placeholder="000.000.000-00"
                     class:input="font-mono tracking-widest"
@@ -257,14 +257,14 @@ new #[Title('Executar consulta')] class extends Component {
             <button
                 type="submit"
                 wire:loading.attr="disabled"
-                wire:target="executar"
+                wire:target="execute"
                 data-test="executar-consulta"
                 class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fire-400 via-fire-500 to-fire-600 px-5 font-display text-sm font-semibold text-white shadow-[0_0_20px_-4px_rgb(255_107_0_/_60%)] transition motion-safe:hover:scale-[1.01] motion-safe:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
-                <flux:icon.bolt wire:loading.remove wire:target="executar" class="size-4" />
-                <flux:icon.loading wire:loading wire:target="executar" class="size-4" />
-                <span wire:loading.remove wire:target="executar">{{ __('Executar consulta') }}</span>
-                <span wire:loading wire:target="executar">{{ __('Executando…') }}</span>
+                <flux:icon.bolt wire:loading.remove wire:target="execute" class="size-4" />
+                <flux:icon.loading wire:loading wire:target="execute" class="size-4" />
+                <span wire:loading.remove wire:target="execute">{{ __('Executar consulta') }}</span>
+                <span wire:loading wire:target="execute">{{ __('Executando…') }}</span>
             </button>
         </form>
 
@@ -285,10 +285,10 @@ new #[Title('Executar consulta')] class extends Component {
                     </div>
 
                     <dl class="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-                        @foreach ($this->execution->result ?? [] as $campo => $valor)
+                        @foreach ($this->execution->result ?? [] as $field => $value)
                             <div>
-                                <dt class="text-xs text-white/55 capitalize">{{ str_replace('_', ' ', (string) $campo) }}</dt>
-                                <dd class="font-mono text-sm text-white">{{ is_scalar($valor) ? $valor : json_encode($valor) }}</dd>
+                                <dt class="text-xs text-white/55 capitalize">{{ str_replace('_', ' ', (string) $field) }}</dt>
+                                <dd class="font-mono text-sm text-white">{{ is_scalar($value) ? $value : json_encode($value) }}</dd>
                             </div>
                         @endforeach
                     </dl>
@@ -307,8 +307,8 @@ new #[Title('Executar consulta')] class extends Component {
                 @endif
 
                 <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-fire-500/14 pt-4 text-sm">
-                    <p><span class="text-white/55">{{ __('Custo:') }}</span> <span class="font-mono text-white" data-test="custo-execucao">{{ $this->custoLabel }}</span></p>
-                    <p><span class="text-white/55">{{ __('Saldo atual:') }}</span> <span class="font-mono text-white" data-test="saldo-atual">{{ Number::currency($this->saldoCents / 100, in: 'BRL', locale: 'pt_BR') }}</span></p>
+                    <p><span class="text-white/55">{{ __('Custo:') }}</span> <span class="font-mono text-white" data-test="custo-execucao">{{ $this->costLabel }}</span></p>
+                    <p><span class="text-white/55">{{ __('Saldo atual:') }}</span> <span class="font-mono text-white" data-test="saldo-atual">{{ Number::currency($this->balanceCents / 100, in: 'BRL', locale: 'pt_BR') }}</span></p>
                 </div>
             </div>
         @endif

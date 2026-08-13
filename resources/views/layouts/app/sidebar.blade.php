@@ -37,11 +37,11 @@
                 // nem qualquer estatística de aprovação/reprovação do dashboard legado.
                 $navItems = [
                     ['route' => 'dashboard', 'label' => __('Dashboard'), 'icon' => 'home'],
-                    ['route' => 'checker.executar', 'label' => __('Executar consulta'), 'icon' => 'magnifying-glass'],
-                    ['route' => 'checker.carteira', 'label' => __('Carteira'), 'icon' => 'wallet'],
-                    ['route' => 'checker.planos', 'label' => __('Planos'), 'icon' => 'rectangle-stack'],
+                    ['route' => 'checker.execute', 'label' => __('Executar consulta'), 'icon' => 'magnifying-glass'],
+                    ['route' => 'checker.wallet', 'label' => __('Carteira'), 'icon' => 'wallet'],
+                    ['route' => 'checker.plans', 'label' => __('Planos'), 'icon' => 'rectangle-stack'],
                     ['route' => 'profile.edit', 'label' => __('Perfil'), 'icon' => 'user'],
-                    ['route' => 'checker.historico', 'label' => __('Histórico'), 'icon' => 'clock'],
+                    ['route' => 'checker.history', 'label' => __('Histórico'), 'icon' => 'clock'],
                 ];
             @endphp
 
