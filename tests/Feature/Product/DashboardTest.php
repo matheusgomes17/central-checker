@@ -10,12 +10,12 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Number;
-use Modules\Carteira\Enums\WalletTransactionType;
-use Modules\Carteira\Models\Wallet;
-use Modules\Carteira\Models\WalletTransaction;
 use Modules\CheckerApi\Enums\ProviderOutcome;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
+use Modules\Wallet\Enums\WalletTransactionType;
+use Modules\Wallet\Models\Wallet;
+use Modules\Wallet\Models\WalletTransaction;
 use Tests\TestCase;
 
 /**

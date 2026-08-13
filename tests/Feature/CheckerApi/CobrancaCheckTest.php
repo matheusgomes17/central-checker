@@ -5,19 +5,19 @@ declare(strict_types=1);
 use App\Actions\CheckerApi\ExecutarCheck;
 use App\Models\Team;
 use App\Support\TenantManager;
-use Modules\Carteira\Actions\CreditWallet;
-use Modules\Carteira\Enums\WalletHoldStatus;
-use Modules\Carteira\Enums\WalletTransactionType;
-use Modules\Carteira\Exceptions\InsufficientBalanceException;
-use Modules\Carteira\Models\Wallet;
-use Modules\Carteira\Models\WalletHold;
-use Modules\Carteira\Models\WalletTransaction;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
 use Modules\CheckerApi\Support\CheckInput;
 use Modules\CheckerApi\Support\FakeProvider;
 use Modules\CheckerApi\Support\ProviderRegistry;
 use Modules\CheckerApi\Support\ProviderResult;
+use Modules\Wallet\Actions\CreditWallet;
+use Modules\Wallet\Enums\WalletHoldStatus;
+use Modules\Wallet\Enums\WalletTransactionType;
+use Modules\Wallet\Exceptions\InsufficientBalanceException;
+use Modules\Wallet\Models\Wallet;
+use Modules\Wallet\Models\WalletHold;
+use Modules\Wallet\Models\WalletTransaction;
 
 function setupTeam(int $balance): Team
 {

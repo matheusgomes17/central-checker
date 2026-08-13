@@ -19,7 +19,7 @@ return [
 
     'enabled' => [
         'Pagamentos',
-        'Carteira',
+        'Wallet',
         'CheckerApi',
         //
     ],

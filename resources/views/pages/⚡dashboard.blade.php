@@ -12,9 +12,9 @@ use Illuminate\Support\Number;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Modules\Carteira\Enums\WalletTransactionType;
-use Modules\Carteira\Models\Wallet;
-use Modules\Carteira\Models\WalletTransaction;
+use Modules\Wallet\Enums\WalletTransactionType;
+use Modules\Wallet\Models\Wallet;
+use Modules\Wallet\Models\WalletTransaction;
 use Modules\CheckerApi\Enums\ProviderOutcome;
 use Modules\CheckerApi\Models\CheckExecution;
 

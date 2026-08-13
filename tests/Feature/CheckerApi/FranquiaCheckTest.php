@@ -7,10 +7,6 @@ use App\Models\PlanCheck;
 use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Support\TenantManager;
-use Modules\Carteira\Actions\CreditWallet;
-use Modules\Carteira\Enums\WalletTransactionType;
-use Modules\Carteira\Models\Wallet;
-use Modules\Carteira\Models\WalletTransaction;
 use Modules\CheckerApi\Exceptions\FranquiaExhaustedException;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
@@ -18,6 +14,10 @@ use Modules\CheckerApi\Support\CheckInput;
 use Modules\CheckerApi\Support\FakeProvider;
 use Modules\CheckerApi\Support\ProviderRegistry;
 use Modules\CheckerApi\Support\ProviderResult;
+use Modules\Wallet\Actions\CreditWallet;
+use Modules\Wallet\Enums\WalletTransactionType;
+use Modules\Wallet\Models\Wallet;
+use Modules\Wallet\Models\WalletTransaction;
 
 /**
  * Team on the 'pro' plan, active subscription — the period Franquia anchors

@@ -11,15 +11,15 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
-use Modules\Carteira\Actions\CreditWallet;
-use Modules\Carteira\Enums\WalletTransactionType;
-use Modules\Carteira\Models\Wallet;
 use Modules\CheckerApi\Enums\ProviderOutcome;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
 use Modules\CheckerApi\Support\FakeProvider;
 use Modules\CheckerApi\Support\ProviderRegistry;
 use Modules\CheckerApi\Support\ProviderResult;
+use Modules\Wallet\Actions\CreditWallet;
+use Modules\Wallet\Enums\WalletTransactionType;
+use Modules\Wallet\Models\Wallet;
 use Tests\TestCase;
 
 /**

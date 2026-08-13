@@ -12,9 +12,9 @@ use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Modules\Carteira\Actions\CreditWallet;
-use Modules\Carteira\Enums\WalletTransactionType;
-use Modules\Carteira\Models\Wallet;
+use Modules\Wallet\Actions\CreditWallet;
+use Modules\Wallet\Enums\WalletTransactionType;
+use Modules\Wallet\Models\Wallet;
 
 class WalletsTable
 {

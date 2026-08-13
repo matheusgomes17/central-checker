@@ -11,13 +11,13 @@ use App\Support\Billing\Subscriptions;
 use App\Support\TenantManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
-use Modules\Carteira\Models\Wallet;
-use Modules\Carteira\Models\WalletTransaction;
 use Modules\Pagamentos\Contracts\WebhookVerifier;
 use Modules\Pagamentos\Enums\PaymentPurpose;
 use Modules\Pagamentos\Enums\PaymentStatus;
 use Modules\Pagamentos\Models\PaymentIntent;
 use Modules\Pagamentos\Webhooks\VirtualPayWebhookVerifier;
+use Modules\Wallet\Models\Wallet;
+use Modules\Wallet\Models\WalletTransaction;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 

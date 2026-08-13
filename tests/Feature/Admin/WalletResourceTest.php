@@ -13,9 +13,9 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Modules\Carteira\Enums\WalletHoldStatus;
-use Modules\Carteira\Models\Wallet;
-use Modules\Carteira\Models\WalletHold;
+use Modules\Wallet\Enums\WalletHoldStatus;
+use Modules\Wallet\Models\Wallet;
+use Modules\Wallet\Models\WalletHold;
 use Tests\TestCase;
 
 /**

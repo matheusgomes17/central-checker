@@ -12,14 +12,14 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Number;
 use Livewire\Livewire;
-use Modules\Carteira\Enums\WalletTransactionType;
-use Modules\Carteira\Models\Wallet;
-use Modules\Carteira\Models\WalletTransaction;
 use Modules\Pagamentos\Contracts\PaymentGateway;
 use Modules\Pagamentos\Enums\PaymentPurpose;
 use Modules\Pagamentos\Enums\PaymentStatus;
 use Modules\Pagamentos\Gateways\VirtualPayGateway;
 use Modules\Pagamentos\Models\PaymentIntent;
+use Modules\Wallet\Enums\WalletTransactionType;
+use Modules\Wallet\Models\Wallet;
+use Modules\Wallet\Models\WalletTransaction;
 use Tests\TestCase;
 
 /**

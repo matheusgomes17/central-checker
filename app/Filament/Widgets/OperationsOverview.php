@@ -7,9 +7,9 @@ namespace App\Filament\Widgets;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Number;
-use Modules\Carteira\Models\Wallet;
 use Modules\CheckerApi\Enums\ProviderOutcome;
 use Modules\CheckerApi\Models\CheckExecution;
+use Modules\Wallet\Models\Wallet;
 use Override;
 
 /**

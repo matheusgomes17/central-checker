@@ -11,7 +11,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Modules\Carteira\Models\WalletTransaction;
+use Modules\Wallet\Models\WalletTransaction;
 use Tests\TestCase;
 
 /**

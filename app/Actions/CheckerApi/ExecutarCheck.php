@@ -11,10 +11,6 @@ use App\Models\UserCheckOverride;
 use App\Support\Billing\Franquia;
 use App\Support\Billing\FranquiaStatus;
 use App\Support\TenantManager;
-use Modules\Carteira\Actions\ConfirmHold;
-use Modules\Carteira\Actions\ReleaseHold;
-use Modules\Carteira\Actions\ReserveCredit;
-use Modules\Carteira\Models\WalletHold;
 use Modules\CheckerApi\Exceptions\CheckBlockedForUserException;
 use Modules\CheckerApi\Exceptions\CheckUnavailableException;
 use Modules\CheckerApi\Exceptions\FranquiaExhaustedException;
@@ -25,6 +21,10 @@ use Modules\CheckerApi\Support\CheckInput;
 use Modules\CheckerApi\Support\CircuitBreaker;
 use Modules\CheckerApi\Support\ProviderRegistry;
 use Modules\CheckerApi\Support\ResilientProvider;
+use Modules\Wallet\Actions\ConfirmHold;
+use Modules\Wallet\Actions\ReleaseHold;
+use Modules\Wallet\Actions\ReserveCredit;
+use Modules\Wallet\Models\WalletHold;
 use Throwable;
 
 /**

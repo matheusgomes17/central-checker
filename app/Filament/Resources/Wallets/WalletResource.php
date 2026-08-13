@@ -13,7 +13,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Modules\Carteira\Models\Wallet;
+use Modules\Wallet\Models\Wallet;
 use Override;
 use UnitEnum;
 

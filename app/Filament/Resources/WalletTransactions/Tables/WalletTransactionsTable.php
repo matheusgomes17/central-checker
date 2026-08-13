@@ -7,7 +7,7 @@ namespace App\Filament\Resources\WalletTransactions\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Modules\Carteira\Enums\WalletTransactionType;
+use Modules\Wallet\Enums\WalletTransactionType;
 
 class WalletTransactionsTable
 {

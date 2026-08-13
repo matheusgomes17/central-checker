@@ -11,10 +11,10 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Modules\Carteira\Models\Wallet;
 use Modules\CheckerApi\Enums\ProviderOutcome;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
+use Modules\Wallet\Models\Wallet;
 use Tests\TestCase;
 
 /**

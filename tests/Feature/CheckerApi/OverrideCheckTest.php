@@ -11,10 +11,6 @@ use App\Models\User;
 use App\Models\UserCheckOverride;
 use App\Support\Billing\Franquia;
 use App\Support\TenantManager;
-use Modules\Carteira\Actions\CreditWallet;
-use Modules\Carteira\Enums\WalletTransactionType;
-use Modules\Carteira\Models\Wallet;
-use Modules\Carteira\Models\WalletTransaction;
 use Modules\CheckerApi\Exceptions\CheckBlockedForUserException;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
@@ -22,6 +18,10 @@ use Modules\CheckerApi\Support\CheckInput;
 use Modules\CheckerApi\Support\FakeProvider;
 use Modules\CheckerApi\Support\ProviderRegistry;
 use Modules\CheckerApi\Support\ProviderResult;
+use Modules\Wallet\Actions\CreditWallet;
+use Modules\Wallet\Enums\WalletTransactionType;
+use Modules\Wallet\Models\Wallet;
+use Modules\Wallet\Models\WalletTransaction;
 
 /**
  * A team with a member user, wallet optionally funded. UserFactory's

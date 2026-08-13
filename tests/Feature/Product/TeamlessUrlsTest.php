@@ -9,7 +9,7 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Number;
-use Modules\Carteira\Models\Wallet;
+use Modules\Wallet\Models\Wallet;
 use Tests\TestCase;
 
 /**
