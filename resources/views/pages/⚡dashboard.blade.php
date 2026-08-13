@@ -127,7 +127,7 @@ new #[Title('Dashboard')] class extends Component {
      * @return Collection<int, CheckExecution>
      */
     #[Computed]
-    public function consultasRecentes(): Collection
+    public function recentChecks(): Collection
     {
         return CheckExecution::query()
             ->with('check')
@@ -143,7 +143,7 @@ new #[Title('Dashboard')] class extends Component {
      * @return Collection<int, WalletTransaction>
      */
     #[Computed]
-    public function transacoesRecentes(): Collection
+    public function recentTransactions(): Collection
     {
         return WalletTransaction::query()
             ->latest()
@@ -242,7 +242,7 @@ new #[Title('Dashboard')] class extends Component {
                     {{ __('Últimas consultas') }}
                 </h2>
 
-                @if ($this->consultasRecentes->isEmpty())
+                @if ($this->recentChecks->isEmpty())
                     <div class="mt-6 flex flex-col items-center gap-1 py-6 text-center text-white/40" data-test="consultas-recentes-vazio">
                         <flux:icon.inbox class="size-8" />
                         <p class="text-sm font-medium text-white/55">{{ __('Nenhuma consulta realizada ainda') }}</p>
@@ -250,7 +250,7 @@ new #[Title('Dashboard')] class extends Component {
                     </div>
                 @else
                     <ul class="mt-4 divide-y divide-white/5">
-                        @foreach ($this->consultasRecentes as $execucao)
+                        @foreach ($this->recentChecks as $execucao)
                             @php
                                 $rotuloOutcome = match ($execucao->outcome) {
                                     ProviderOutcome::Success => __('Sucesso'),
@@ -290,7 +290,7 @@ new #[Title('Dashboard')] class extends Component {
                     {{ __('Últimas transações') }}
                 </h2>
 
-                @if ($this->transacoesRecentes->isEmpty())
+                @if ($this->recentTransactions->isEmpty())
                     <div class="mt-6 flex flex-col items-center gap-1 py-6 text-center text-white/40" data-test="transacoes-recentes-vazio">
                         <flux:icon.inbox class="size-8" />
                         <p class="text-sm font-medium text-white/55">{{ __('Nenhuma transação realizada ainda') }}</p>
@@ -298,7 +298,7 @@ new #[Title('Dashboard')] class extends Component {
                     </div>
                 @else
                     <ul class="mt-4 divide-y divide-white/5">
-                        @foreach ($this->transacoesRecentes as $lancamento)
+                        @foreach ($this->recentTransactions as $lancamento)
                             @php
                                 $credito = $lancamento->type->isCredit();
                                 $rotuloTipo = match ($lancamento->type) {
