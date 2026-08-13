@@ -8,6 +8,7 @@ use App\Support\TenantManager;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Number;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
@@ -109,7 +110,7 @@ new #[Title('Executar consulta')] class extends Component {
 
             if (! in_array(strlen($digits), [11, 14], true)) {
                 $results[] = [
-                    'masked' => $this->mask($line),
+                    'masked' => $this->hardMask($line),
                     'status' => 'invalid',
                     'execution_id' => null,
                 ];
@@ -142,13 +143,35 @@ new #[Title('Executar consulta')] class extends Component {
     }
 
     /**
-     * Masks a document value the same way {@see CheckInput::masked()} would
-     * mask it as an input — first 3 and last 2 kept, middle starred. Never
-     * store or render the raw value, valid or not.
+     * Masks a validated document (already known to be 11 or 14 digits) the
+     * same way {@see CheckInput::masked()} would mask it as an input — first
+     * 3 and last 2 kept, middle starred. Never use this for unvalidated
+     * input: {@see CheckInput::masked()} returns short values (under 6
+     * chars) untouched, which is safe for a CPF/CNPJ digit string but would
+     * leak a short *invalid* line verbatim — {@see self::hardMask()} is for
+     * that case.
      */
     private function mask(string $value): string
     {
         return CheckInput::fromArray(['documento' => $value])->masked()['documento'];
+    }
+
+    /**
+     * Masks an unvalidated line for display — always obscures, regardless of
+     * length, unlike {@see CheckInput::masked()}. Used only for `invalid`
+     * rows, where the raw text never went through the digit-length check
+     * that makes the normal mask safe. Keeps at most the first character;
+     * one or two characters are starred out entirely.
+     */
+    private function hardMask(string $value): string
+    {
+        $length = Str::length($value);
+
+        if ($length <= 2) {
+            return str_repeat('*', $length);
+        }
+
+        return Str::substr($value, 0, 1).str_repeat('*', $length - 1);
     }
 
     /**
@@ -185,10 +208,18 @@ new #[Title('Executar consulta')] class extends Component {
     #[Computed]
     public function rows(): Collection
     {
-        return collect($this->results)->map(function (array $entry): array {
-            $execution = $entry['execution_id'] === null ? null : CheckExecution::query()
-                ->where('user_id', Auth::id())
-                ->find($entry['execution_id']);
+        $executionIds = collect($this->results)->pluck('execution_id')->filter()->values();
+
+        // Uma query pro lote inteiro, não uma por linha: um lote de 100
+        // não pode virar 100 SELECTs só pra montar a tela.
+        $executions = $executionIds->isEmpty() ? collect() : CheckExecution::query()
+            ->where('user_id', Auth::id())
+            ->whereIn('id', $executionIds)
+            ->get()
+            ->keyBy('id');
+
+        return collect($this->results)->map(function (array $entry) use ($executions): array {
+            $execution = $entry['execution_id'] === null ? null : $executions->get($entry['execution_id']);
 
             return [
                 'masked' => $entry['masked'],

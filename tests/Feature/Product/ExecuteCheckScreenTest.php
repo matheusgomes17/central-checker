@@ -6,9 +6,13 @@ namespace Tests\Feature\Product;
 
 use App\Actions\CheckerApi\ExecuteCheck;
 use App\Enums\TeamRole;
+use App\Models\PlanCheck;
+use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
+use App\Models\UserCheckOverride;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Sleep;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\CheckerApi\Enums\ProviderOutcome;
@@ -20,6 +24,8 @@ use Modules\CheckerApi\Support\ProviderResult;
 use Modules\Wallet\Actions\CreditWallet;
 use Modules\Wallet\Enums\WalletTransactionType;
 use Modules\Wallet\Models\Wallet;
+use ReflectionMethod;
+use ReflectionProperty;
 use Tests\TestCase;
 
 /**
@@ -114,6 +120,35 @@ class ExecuteCheckScreenTest extends TestCase
     }
 
     /**
+     * {@see CheckInput::masked()} intentionally leaves short values (under 6
+     * chars) untouched — safe for its normal use (an already-validated
+     * 11/14-digit document), but not for an `invalid` line, whose raw text
+     * never passed that length check. A short invalid line ("1234", a single
+     * digit) must go through a mask that always obscures, or the raw value
+     * — third-party PII — renders verbatim. Written to fail first against a
+     * version of execute() that masks invalid lines with `mask()` instead of
+     * `hardMask()`.
+     */
+    public function test_a_short_invalid_line_never_leaks_the_raw_value(): void
+    {
+        [$user] = $this->memberOf();
+        resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+        $check = Check::factory()->create(['provider_key' => 'fake']);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.execute')
+            ->set('checkId', $check->id)
+            ->set('documents', "1234\n5")
+            ->call('execute')
+            ->assertHasNoErrors()
+            ->assertSee('Inválido')
+            ->assertDontSee('1234');
+
+        expect(CheckExecution::query()->count())->toBe(0);
+    }
+
+    /**
      * The wallet covers exactly the first paid line. The second cannot be
      * reserved, so {@see ExecuteCheck::handle()} throws
      * InsufficientBalanceException — caught per line, not left to bubble up
@@ -140,6 +175,95 @@ class ExecuteCheckScreenTest extends TestCase
 
         expect(CheckExecution::query()->count())->toBe(1)
             ->and(Wallet::forTeam($team)->balance_cents)->toBe(0);
+    }
+
+    /**
+     * A plan allowance with quota 1 and a free check (no price to fall back
+     * on): the first line consumes the whole quota, the second hits
+     * {@see \Modules\CheckerApi\Exceptions\AllowanceExhaustedException} —
+     * caught per line, marked 'allowance_exhausted', not recorded, batch
+     * still finishes.
+     */
+    public function test_allowance_exhausted_partway_marks_the_rest_without_aborting_the_batch(): void
+    {
+        [$user, $team] = $this->memberOf();
+        PlanSubscription::factory()->active()->create(['team_id' => $team->id, 'plan' => 'pro']);
+        resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+        $check = Check::factory()->create(['provider_key' => 'fake']);
+        PlanCheck::factory()->create(['plan' => 'pro', 'check_id' => $check->id, 'quota' => 1]);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.execute')
+            ->set('checkId', $check->id)
+            ->set('documents', "11111111111\n22222222222")
+            ->call('execute')
+            ->assertHasNoErrors()
+            ->assertSee('Franquia esgotada');
+
+        expect(CheckExecution::query()->count())->toBe(1);
+    }
+
+    /**
+     * A UserCheckOverride blocks this user for this check, regardless of
+     * plan or wallet — every line hits
+     * {@see \Modules\CheckerApi\Exceptions\CheckBlockedForUserException}
+     * before a provider is ever called, marked 'blocked', batch still
+     * finishes instead of failing on the first line.
+     */
+    public function test_a_blocked_user_marks_every_line_without_aborting_the_batch(): void
+    {
+        [$user, $team] = $this->memberOf();
+        resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+        $check = Check::factory()->create(['provider_key' => 'fake']);
+        UserCheckOverride::factory()->blocked()->create([
+            'team_id' => $team->id,
+            'user_id' => $user->id,
+            'check_id' => $check->id,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.execute')
+            ->set('checkId', $check->id)
+            ->set('documents', "11111111111\n22222222222")
+            ->call('execute')
+            ->assertHasNoErrors()
+            ->assertSee('Bloqueado');
+
+        expect(CheckExecution::query()->count())->toBe(0);
+    }
+
+    /**
+     * The top-of-execute() availability guard only catches a check that was
+     * already down before the batch started. This drives the circuit
+     * breaker open mid-batch instead: three lines return a Failed outcome
+     * (two provider attempts each, per {@see \Modules\CheckerApi\Support\ResilientProvider::MAX_TRIES}),
+     * which trips {@see \Modules\CheckerApi\Support\CircuitBreaker::FAILURE_THRESHOLD}
+     * (5) partway through the third. The fourth line's own
+     * {@see ExecuteCheck::handle()} call re-checks availability at entry and
+     * throws {@see \Modules\CheckerApi\Exceptions\CheckUnavailableException}
+     * — caught per line, marked 'unavailable', batch still finishes.
+     */
+    public function test_check_unavailable_mid_batch_marks_the_rest_without_aborting_the_batch(): void
+    {
+        Sleep::fake();
+
+        [$user] = $this->memberOf();
+        resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::failed('erro do provedor')));
+        $check = Check::factory()->create(['provider_key' => 'fake']);
+
+        $this->actingAs($user);
+
+        Livewire::test('pages::checker.execute')
+            ->set('checkId', $check->id)
+            ->set('documents', "11111111111\n22222222222\n33333333333\n44444444444")
+            ->call('execute')
+            ->assertHasNoErrors()
+            ->assertSee('Em manutenção');
+
+        expect(CheckExecution::query()->where('outcome', ProviderOutcome::Failed)->count())->toBe(3)
+            ->and(CheckExecution::query()->count())->toBe(3);
     }
 
     public function test_more_than_the_cap_is_refused_without_running_anything(): void
@@ -252,6 +376,74 @@ class ExecuteCheckScreenTest extends TestCase
         }
 
         $component->assertDontSee('Fulano de Tal');
+    }
+
+    /**
+     * The test above only exercises the #[Locked] guard — Livewire refuses
+     * the crafted `->set('results', ...)` before `rows()` ever runs, so the
+     * `where('user_id', Auth::id())` inside it never executes on that path.
+     * This one bypasses #[Locked] directly (via reflection, standing in for
+     * "the trap door disappears somehow") to prove the second layer holds on
+     * its own: `rows()` must still refuse to resolve a same-team sibling's
+     * execution id to their private, encrypted-at-rest result. Written to
+     * fail first against a version of `rows()` without the
+     * `where('user_id', ...)` scope — with that removed,
+     * `$rows->first()['result']` comes back with the teammate's data instead
+     * of null.
+     */
+    public function test_rows_scopes_execution_lookup_to_the_owner_even_if_locked_is_bypassed(): void
+    {
+        $team = Team::factory()->create();
+
+        $memberB = User::factory()->create();
+        $team->members()->attach($memberB);
+        $memberB->assignTeamRole($team, TeamRole::Member);
+        $memberB->switchTeam($team);
+
+        resolve(CreditWallet::class)->handle($team, 1000, WalletTransactionType::Recharge, 'Fundo');
+        resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano de Tal'])));
+        $check = Check::factory()->create(['provider_key' => 'fake']);
+
+        $this->actingAs($memberB);
+
+        Livewire::test('pages::checker.execute')
+            ->set('checkId', $check->id)
+            ->set('documents', '12345678909')
+            ->call('execute')
+            ->assertHasNoErrors();
+
+        $bExecution = CheckExecution::query()->sole();
+
+        $memberA = User::factory()->create();
+        $team->members()->attach($memberA);
+        $memberA->assignTeamRole($team, TeamRole::Member);
+        $memberA->switchTeam($team);
+
+        $this->actingAs($memberA);
+
+        $component = Livewire::test('pages::checker.execute')->instance();
+
+        // Escreve a propriedade direto via reflection, contornando o
+        // #[Locked] — simula o que aconteceria se a trava do Livewire
+        // sumisse, para provar que o where('user_id') em rows() segura
+        // sozinho.
+        new ReflectionProperty($component, 'results')->setValue($component, [[
+            'masked' => '123******09',
+            'status' => 'success',
+            'execution_id' => $bExecution->id,
+        ]]);
+
+        // rows() also only exists on the Volt anonymous class, invisible to
+        // static analysis the same way `results` above is — call it through
+        // reflection too, and narrow the otherwise-mixed return with a @var
+        // matching the component's own documented shape for rows().
+        /** @var \Illuminate\Support\Collection<int, array{masked: string, status: string, result: array<string, mixed>|null, cost: string|null}> $rows */
+        $rows = new ReflectionMethod($component, 'rows')->invoke($component);
+
+        $row = $rows->sole();
+
+        expect($row['result'])->toBeNull()
+            ->and($row['cost'])->toBeNull();
     }
 
     public function test_a_check_in_maintenance_is_refused_before_running_anything(): void

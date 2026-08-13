@@ -2,25 +2,25 @@
 
 ## Status
 
-Concluído. Suíte `ExecuteCheckScreenTest` verde (11/11), suíte não-Browser completa
-verde, `pint`/`rector`/`phpstan`/`peck` limpos, `npm run build` ok. Commit criado em
-`main` — ver SHA abaixo.
+Concluído, incluindo a rodada de revisão (1 Critical LGPD + 1 Important + 2 Minor,
+todos corrigidos). Suíte `ExecuteCheckScreenTest` verde (16/16), suíte não-Browser
+completa verde, `pint`/`rector`/`phpstan`/`peck` limpos, `npm run build` ok. Commits
+em `main` — ver SHAs abaixo.
 
 ## Resumo dos testes
 
 - `sail artisan test --compact tests/Feature/Product/ExecuteCheckScreenTest.php`:
-  **11 passed, 39 assertions**.
-- `sail artisan test --compact --exclude-testsuite=Browser` (suíte inteira):
-  **715 total, 713 passed, 2 skipped** (skips pré-existentes, não relacionados).
+  **16 passed, 56 assertions** (11 da primeira rodada + 5 da revisão).
+- `sail artisan test --compact --exclude-testsuite=Browser` (suíte inteira, antes e
+  depois da revisão): **verde, sem regressão** (2 skips pré-existentes, não
+  relacionados).
 - `vendor/bin/pint --dirty --format agent` (host): passou.
 - `sail composer types:check` (phpstan): **0 erros**.
-- `composer spell:check` (peck, host): passou — reescrevi duas palavras nos
-  comentários do teste ("deduped" → "duplicates removed", `whitespace` no nome do
-  teste → `blank_lines`) em vez de tocar em `peck.json`.
+- `composer spell:check` (peck, host): passou.
 - `composer refactor:check` (rector, host): passou, 0 arquivos alterados.
 - `npm run build`: ok.
 
-## O que mudou
+## O que mudou (primeira rodada)
 
 `resources/views/pages/checker/⚡execute.blade.php` — reescrito de ponta a ponta:
 
@@ -28,70 +28,104 @@ verde, `pint`/`rector`/`phpstan`/`peck` limpos, `npm run build` ok. Commit criad
 - Removida a propriedade `#[Locked] public ?int $executionId`; no lugar,
   `#[Locked] public array $results = []` — uma entrada por linha submetida
   (`masked`, `status`, `execution_id`).
-- `execute()` agora: reseta `$results`, valida `checkId`, checa disponibilidade do
-  check, faz o parse do textarea (split por linha, trim, remove linhas em branco,
+- `execute()`: reseta `$results`, valida `checkId`, checa disponibilidade do check,
+  faz o parse do textarea (split por linha, trim, remove linhas em branco,
   `->unique()` preservando ordem, checa o teto de 100 linhas únicas), e roda um
   `resolve(ExecuteCheck::class)->handle(...)` por linha válida dentro de um
   `try/catch` **por linha** — uma linha ruim nunca aborta o lote.
 - Nova constante `private const int MAX_BATCH = 100;`.
-- Novo helper privado `mask()` que reaproveita `CheckInput::masked()` (nunca
-  reimplementa a máscara).
-- `execution()` + `costLabel()` (computeds de uma execução só) viraram
-  `rows()` (mapeia `$results` para linhas prontas pra tela, buscando cada
-  `CheckExecution` **escopada por `user_id`**, não só por time) e `summary()`
-  (contagem para a barra de estatísticas). `costLabelFor()` é a mesma lógica de
-  custo de antes, agora recebendo a execução em vez de ler de um computed.
-- View: cartões de seleção do check mantidos como estavam. Único input trocado por
-  `flux:textarea` (mono, `min-h-[150px]`, `wire:model="documents"`), com hint
-  "CPF ou CNPJ, um por linha · até 100 por lote." Botão de gradiente de fogo mantido.
-  Resultado agora é uma barra de estatísticas em linha (inspirada no
-  `.checker-stats` do checker legado — Total / Sucesso / Sem registro / Falha /
-  Não executadas) seguida de uma lista de linhas, cada uma com o documento
-  mascarado, um badge de status (verde=sucesso, cinza=sem registro,
-  vermelho=falha, âmbar=tudo que não rodou: inválido/bloqueado/saldo
-  insuficiente/franquia esgotada/em manutenção) e, para sucesso, os campos do
-  resultado + custo.
+- `rows()` (mapeia `$results` para linhas prontas pra tela) e `summary()` (contagem
+  para a barra de estatísticas) substituem os antigos `execution()`/`costLabel()` de
+  uma execução só.
+- View: cartões de seleção do check mantidos. Único input trocado por
+  `flux:textarea` (mono, `min-h-[150px]`, `wire:model="documents"`). Resultado agora
+  é uma barra de estatísticas em linha (inspirada no `.checker-stats` do checker
+  legado) seguida de uma lista por linha com badge de status.
 
-## Como o lote trata cada caso
+## Correções da revisão
 
-- **Linha inválida** (não tem 11 nem 14 dígitos após limpar não-dígitos): marcada
-  `invalid`, **nunca chega a rodar** `ExecuteCheck::handle()` — não cobra, não gera
-  `CheckExecution`.
-- **Duplicata**: linhas idênticas (após trim) colapsam em uma só antes do loop —
-  rodam **uma vez**, preservando a ordem da primeira ocorrência.
-- **Teto (101+ linhas únicas)**: recusado inteiro com `addError('documents', ...)`
-  antes de rodar qualquer coisa — não trunca silenciosamente.
-- **Erro no meio do lote** (`CheckUnavailableException`,
-  `AllowanceExhaustedException`, `CheckBlockedForUserException`,
-  `InsufficientBalanceException`): cada um vira uma entrada com o status
-  correspondente e `execution_id: null`; o loop continua. Testado explicitamente
-  para saldo insuficiente: reverti o catch de propósito, rodei o teste, vi ele
-  falhar com a exceção vazando (mensagem "Saldo insuficiente: disponível 0, pedido
-  500"), e restaurei o catch — o teste tem dentes.
+### Critical (LGPD) — linha inválida curta vazava o valor cru
+
+`mask($line)` delegava pra `CheckInput::masked()`, que **por design** devolve
+valores curtos (< 6 chars) sem mascarar — seguro pro uso normal dele (um CPF/CNPJ já
+validado, sempre ≥ 11 dígitos), mas não pra uma linha `invalid`, cujo texto bruto
+nunca passou por aquele filtro de comprimento. Uma linha inválida curta ("1234", "5")
+era gravada em `$results` e **renderizada verbatim**.
+
+Correção: novo helper `hardMask()` — sempre obscurece, mantém no máximo o primeiro
+caractere, estrela tudo em strings de 1–2 chars. Aplicado só no ramo `invalid`; o
+ramo válido continua com `mask()` (sempre ≥ 11 dígitos, seguro).
+
+**Visto falhar primeiro:** revertido `hardMask($line)` para `mask($line)` no ramo
+inválido e rodado `test_a_short_invalid_line_never_leaks_the_raw_value` — falhou
+porque o HTML renderizado continha `data-test="linha-documento-0">1234<` (o "1234"
+cru, verbatim). Corrigido e reconfirmado verde.
+
+### Important — owner-scope de `rows()` sem cobertura própria
+
+O teste original só provava o `#[Locked]` (Livewire recusa o `->set('results', ...)`
+antes de `rows()` rodar) — o `where('user_id', Auth::id())` dentro de `rows()` nunca
+era exercido. Novo teste
+`test_rows_scopes_execution_lookup_to_the_owner_even_if_locked_is_bypassed` contorna
+o Locked via `ReflectionProperty` (escreve `results` direto na instância) e chama
+`rows()` via `ReflectionMethod` (mesmo motivo: método só existe na classe anônima do
+Volt, invisível pro phpstan), com um `execution_id` de um colega de time — prova que
+o resultado (decifrado) do colega não vaza mesmo com a trava contornada.
+
+**Visto falhar primeiro:** removida a cláusula `where('user_id', ...)` de `rows()` e
+rodado o teste — falhou com `Failed asserting that Array &0 ['nome' => 'Fulano de
+Tal'] is null` (o resultado do colega vazando). Corrigido e reconfirmado verde.
+
+### Minor 1 — N+1 em `rows()`
+
+Trocado o `CheckExecution::query()->find($id)` por linha por **uma única query**:
+coleta os `execution_id` não nulos do lote inteiro, `whereIn('id', $ids)` (ainda
+escopado por `user_id`), `->get()->keyBy('id')`, e mapeia. Um lote de 100 vira 1
+SELECT em vez de até 100.
+
+### Minor 2 — cobertura das 4 exceções por linha
+
+Antes só `InsufficientBalanceException` tinha teste dedicado. Adicionados:
+
+- `test_allowance_exhausted_partway_marks_the_rest_without_aborting_the_batch` —
+  `PlanCheck` com quota 1, check grátis (sem preço de fallback): a 1ª linha consome a
+  franquia, a 2ª bate em `AllowanceExhaustedException`.
+- `test_a_blocked_user_marks_every_line_without_aborting_the_batch` —
+  `UserCheckOverride::factory()->blocked()`: toda linha bate em
+  `CheckBlockedForUserException` antes de chamar o provider.
+- `test_check_unavailable_mid_batch_marks_the_rest_without_aborting_the_batch` —
+  cenário mais elaborado: 4 linhas com o FakeProvider sempre devolvendo `failed`
+  (2 tentativas cada, via `ResilientProvider::MAX_TRIES`); a 3ª linha faz o total de
+  falhas bater o limiar do `CircuitBreaker` (5) e o circuito abre; a 4ª linha nem
+  chama o provider — `ExecuteCheck::handle()` recusa direto com
+  `CheckUnavailableException` na sua própria guarda de disponibilidade. Usa
+  `Sleep::fake()` pra não pagar o backoff real do `ResilientProvider` entre
+  tentativas.
+
+## Como o lote trata cada caso (atualizado)
+
+- **Linha inválida**: marcada `invalid` com `hardMask()` (nunca `mask()`) —
+  nunca chega a rodar, não cobra, não gera `CheckExecution`.
+- **Duplicata**: linhas idênticas (após trim) colapsam em uma só antes do loop.
+- **Teto (101+ linhas únicas)**: recusado inteiro, não trunca.
+- **Erro no meio do lote** (as 4 exceções de domínio, agora todas com teste
+  dedicado): cada uma vira uma entrada com o status certo, `execution_id: null`, o
+  loop continua.
 
 ## LGPD + escopo por dono
 
-- O documento bruto nunca é armazenado nem exibido — só a forma mascarada
-  (`CheckInput::masked()`, reaproveitada via o helper `mask()`). Testado
-  (`test_the_raw_document_is_never_shown_only_the_masked_form`): a tela mostra o
-  resultado (dado de terceiro) e a forma mascarada, mas `assertDontSee` o
-  documento cru.
-- `rows()` busca cada `CheckExecution` com `where('user_id', Auth::id())`, igual ao
-  padrão já usado em `history.blade.php` — não basta escopo de time, precisa ser
-  do dono. `results` é `#[Locked]`, então uma requisição forjada não consegue
-  sequer injetar um `execution_id` de outra pessoa via `->set()`; o teste
-  `test_a_team_member_cannot_view_a_teammates_batch_via_a_crafted_results_array`
-  cobre os dois ângulos (Livewire recusa o `set()`, e se a trava sumisse um dia,
-  o escopo por dono em `rows()` ainda recusaria).
+- Documento bruto nunca armazenado nem exibido — linhas válidas via `mask()`
+  (`CheckInput::masked()`), linhas inválidas via `hardMask()` (sempre obscurece,
+  independente do comprimento).
+- `rows()` busca os `CheckExecution` do lote **escopados por `user_id`**, numa única
+  query. `results` é `#[Locked]`. Os dois ângulos têm teste próprio agora: o Locked
+  em si, e o `where('user_id')` isolado (contornando o Locked via reflection).
 
 ## O que vale olhar no navegador
 
-- A rolagem/leitura da lista de resultados com muitas linhas (ex.: 100) — não
-  paginei nem virtualizei, é uma lista simples dentro de um card com
-  `overflow-hidden` no container; vale ver se fica pesado visualmente com o lote
-  cheio.
+- A rolagem/leitura da lista de resultados com muitas linhas (ex.: 100) — sem
+  paginação/virtualização.
 - O textarea em telas pequenas (mobile) — `min-h-[150px]` pode empurrar bastante
-  conteúdo pra baixo do fold num paste grande.
-- A cor âmbar (`flame-warn`) reaproveitada para cinco status diferentes
-  (inválido/bloqueado/saldo insuficiente/franquia esgotada/manutenção) — a
-  distinção fica só no texto do badge, vale confirmar que está legível.
+  conteúdo pra baixo do fold.
+- A cor âmbar (`flame-warn`) reaproveitada para cinco status diferentes — a
+  distinção fica só no texto do badge.
