@@ -13,11 +13,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Modules\CheckerApi\Models\Check;
-use Modules\Pagamentos\Contracts\PaymentGateway;
-use Modules\Pagamentos\Enums\PaymentPurpose;
-use Modules\Pagamentos\Enums\PaymentStatus;
-use Modules\Pagamentos\Gateways\VirtualPayGateway;
-use Modules\Pagamentos\Models\PaymentIntent;
+use Modules\Payments\Contracts\PaymentGateway;
+use Modules\Payments\Enums\PaymentPurpose;
+use Modules\Payments\Enums\PaymentStatus;
+use Modules\Payments\Gateways\VirtualPayGateway;
+use Modules\Payments\Models\PaymentIntent;
 use Tests\TestCase;
 
 /**

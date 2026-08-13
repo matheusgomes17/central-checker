@@ -10,8 +10,8 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Modules\Pagamentos\Enums\PaymentPurpose;
-use Modules\Pagamentos\Models\PaymentIntent;
+use Modules\Payments\Enums\PaymentPurpose;
+use Modules\Payments\Models\PaymentIntent;
 use Tests\TestCase;
 
 /**

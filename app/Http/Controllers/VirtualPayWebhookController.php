@@ -11,16 +11,16 @@ use App\Support\TenantManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
-use Modules\Pagamentos\Contracts\WebhookVerifier;
-use Modules\Pagamentos\Enums\PaymentPurpose;
-use Modules\Pagamentos\Enums\PaymentStatus;
-use Modules\Pagamentos\Models\PaymentIntent;
+use Modules\Payments\Contracts\WebhookVerifier;
+use Modules\Payments\Enums\PaymentPurpose;
+use Modules\Payments\Enums\PaymentStatus;
+use Modules\Payments\Models\PaymentIntent;
 use Modules\Wallet\Actions\CreditWallet;
 use Modules\Wallet\Enums\WalletTransactionType;
 
 /**
  * Receives VirtualPay's confirmation that a Pix charge was paid and credits
- * the wallet — the point where the Pagamentos and Wallet modules meet, which
+ * the wallet — the point where the Payments and Wallet modules meet, which
  * is why it lives in app/ instead of either module.
  *
  * Fraud-critical: fail-closed on the signature (an unverified request never

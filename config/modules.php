@@ -18,7 +18,7 @@ return [
     */
 
     'enabled' => [
-        'Pagamentos',
+        'Payments',
         'Wallet',
         'CheckerApi',
         //

@@ -11,11 +11,11 @@ use App\Support\Billing\Plan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
-use Modules\Pagamentos\Contracts\PaymentGateway;
-use Modules\Pagamentos\Enums\PaymentPurpose;
-use Modules\Pagamentos\Enums\PaymentStatus;
-use Modules\Pagamentos\Gateways\VirtualPayGateway;
-use Modules\Pagamentos\Support\PayerData;
+use Modules\Payments\Contracts\PaymentGateway;
+use Modules\Payments\Enums\PaymentPurpose;
+use Modules\Payments\Enums\PaymentStatus;
+use Modules\Payments\Gateways\VirtualPayGateway;
+use Modules\Payments\Support\PayerData;
 use Tests\TestCase;
 
 /**

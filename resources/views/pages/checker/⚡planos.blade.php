@@ -19,8 +19,8 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Modules\Pagamentos\Models\PaymentIntent;
-use Modules\Pagamentos\Support\PayerData;
+use Modules\Payments\Models\PaymentIntent;
+use Modules\Payments\Support\PayerData;
 
 new #[Title('Planos')] class extends Component {
     /**

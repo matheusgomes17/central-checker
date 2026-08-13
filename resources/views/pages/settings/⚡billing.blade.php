@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Modules\Pagamentos\Enums\PaymentPurpose;
-use Modules\Pagamentos\Enums\PaymentStatus;
-use Modules\Pagamentos\Models\PaymentIntent;
-use Modules\Pagamentos\Support\PayerData;
+use Modules\Payments\Enums\PaymentPurpose;
+use Modules\Payments\Enums\PaymentStatus;
+use Modules\Payments\Models\PaymentIntent;
+use Modules\Payments\Support\PayerData;
 
 new #[Title('Billing')] class extends Component {
     public ?string $confirming = null;

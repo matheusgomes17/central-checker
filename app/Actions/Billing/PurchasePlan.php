@@ -10,17 +10,17 @@ use App\Support\TenantManager;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use Modules\Pagamentos\Contracts\PaymentGateway;
-use Modules\Pagamentos\Enums\PaymentPurpose;
-use Modules\Pagamentos\Enums\PaymentStatus;
-use Modules\Pagamentos\Models\PaymentIntent;
-use Modules\Pagamentos\Support\PayerData;
+use Modules\Payments\Contracts\PaymentGateway;
+use Modules\Payments\Enums\PaymentPurpose;
+use Modules\Payments\Enums\PaymentStatus;
+use Modules\Payments\Models\PaymentIntent;
+use Modules\Payments\Support\PayerData;
 
 /**
  * Starts a plan purchase: opens a pending PaymentIntent for the plan's price
  * and asks the gateway for a Pix charge.
  *
- * Mirrors `Modules\Pagamentos\Actions\CreateRecharge`, but purpose=plan and
+ * Mirrors `Modules\Payments\Actions\CreateRecharge`, but purpose=plan and
  * the amount comes from the plan's price rather than a caller-supplied
  * amount. Does not activate the subscription — that only happens once the
  * webhook confirms the payment actually landed (Task 6).

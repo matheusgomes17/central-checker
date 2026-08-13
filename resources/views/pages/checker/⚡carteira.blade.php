@@ -17,12 +17,12 @@ use Livewire\Component;
 use Modules\Wallet\Enums\WalletTransactionType;
 use Modules\Wallet\Models\Wallet;
 use Modules\Wallet\Models\WalletTransaction;
-use Modules\Pagamentos\Actions\CreateRecharge;
-use Modules\Pagamentos\Enums\PaymentPurpose;
-use Modules\Pagamentos\Enums\PaymentStatus;
-use Modules\Pagamentos\Exceptions\RechargeAmountException;
-use Modules\Pagamentos\Models\PaymentIntent;
-use Modules\Pagamentos\Support\PayerData;
+use Modules\Payments\Actions\CreateRecharge;
+use Modules\Payments\Enums\PaymentPurpose;
+use Modules\Payments\Enums\PaymentStatus;
+use Modules\Payments\Exceptions\RechargeAmountException;
+use Modules\Payments\Models\PaymentIntent;
+use Modules\Payments\Support\PayerData;
 
 new #[Title('Carteira')] class extends Component {
     public string $valor = '';
