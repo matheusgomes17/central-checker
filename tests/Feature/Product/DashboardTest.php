@@ -148,7 +148,7 @@ class DashboardTest extends TestCase
 
     /**
      * The fire-shell sidebar (resources/views/layouts/app/sidebar.blade.php)
-     * replaced the old Flux navigation with its own nav rows, each tagged
+     * replaced the old Flux navigation with its own navigation rows, tagged
      * with a `data-test` derived from the route name. This pins the six
      * product destinations down as sidebar links, not just as links
      * somewhere on the page (see the route()-string assertions above, which
