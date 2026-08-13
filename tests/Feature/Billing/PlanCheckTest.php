@@ -11,7 +11,7 @@ use Tests\TestCase;
 
 /**
  * PlanCheck ties a plan to a check with a quota. These tests pin down the
- * two readings a franquia can have: a numeric limit, or null for unlimited.
+ * two readings an allowance can have: a numeric limit, or null for unlimited.
  */
 class PlanCheckTest extends TestCase
 {

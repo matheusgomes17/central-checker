@@ -19,7 +19,7 @@ use Override;
 use UnitEnum;
 
 /**
- * Which checks a plan includes, and with how large a franquia (quota).
+ * Which checks a plan includes, and with how large an allowance (quota).
  *
  * A null quota means unlimited — see `PlanCheck::isUnlimited()`. Editable,
  * like `CheckResource`: this is where the operator authors the catalog, not

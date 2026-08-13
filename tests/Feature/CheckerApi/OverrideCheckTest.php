@@ -9,7 +9,7 @@ use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserCheckOverride;
-use App\Support\Billing\Franquia;
+use App\Support\Billing\Allowance;
 use App\Support\TenantManager;
 use Modules\CheckerApi\Exceptions\CheckBlockedForUserException;
 use Modules\CheckerApi\Models\Check;
@@ -183,7 +183,7 @@ it('override concedido (comp) não consome a franquia compartilhada do time', fu
     resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userA);
     resolve(ExecutarCheck::class)->handle($check, overrideInput(), $userA);
 
-    $status = resolve(Franquia::class)->for($team, $check);
+    $status = resolve(Allowance::class)->for($team, $check);
     expect($status->used)->toBe(0)
         ->and($status->hasRemaining())->toBeTrue();
 
@@ -192,7 +192,7 @@ it('override concedido (comp) não consome a franquia compartilhada do time', fu
 
     expect($executionB->outcome->value)->toBe('success')
         ->and($executionB->consumed_franquia)->toBeTrue()
-        ->and(resolve(Franquia::class)->for($team, $check)->used)->toBe(1);
+        ->and(resolve(Allowance::class)->for($team, $check)->used)->toBe(1);
 });
 
 it('execução sob franquia do plano incrementa o used', function (): void {
@@ -205,7 +205,7 @@ it('execução sob franquia do plano incrementa o used', function (): void {
     $execution = resolve(ExecutarCheck::class)->handle($check, overrideInput(), $user);
 
     expect($execution->consumed_franquia)->toBeTrue()
-        ->and(resolve(Franquia::class)->for($team, $check)->used)->toBe(1);
+        ->and(resolve(Allowance::class)->for($team, $check)->used)->toBe(1);
 });
 
 it('cobrança em crédito após franquia esgotada não consome mais franquia', function (): void {
@@ -222,5 +222,5 @@ it('cobrança em crédito após franquia esgotada não consome mais franquia', f
 
     expect($creditExecution->consumed_franquia)->toBeFalse()
         ->and(Wallet::forTeam($team)->balance_cents)->toBe(650)
-        ->and(resolve(Franquia::class)->for($team, $check)->used)->toBe(1);
+        ->and(resolve(Allowance::class)->for($team, $check)->used)->toBe(1);
 });

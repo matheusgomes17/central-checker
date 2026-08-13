@@ -22,7 +22,7 @@ use Tests\TestCase;
 
 /**
  * The planos screen: current plan + status up front, the purchasable plans
- * with their included consultas (franquia) below, subscribe via Pix.
+ * with their included consultas (allowance) below, subscribe via Pix.
  *
  * A second entry point to the same PurchasePlan action as
  * settings/⚡billing.blade.php — mirrors its subscribe()/downgrade-confirm

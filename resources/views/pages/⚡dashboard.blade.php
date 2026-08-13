@@ -23,7 +23,7 @@ new #[Title('Dashboard')] class extends Component {
      * The rolling window behind every number on this screen. The paid period
      * can start on any day of the month, so "recent activity" is a fixed
      * 30-day window here, independent of which plan the team is on — a
-     * different question from Franquia's per-check quota, which does align
+     * different question from Allowance's per-check quota, which does align
      * to the subscription cycle.
      */
     private const int WINDOW_DAYS = 30;

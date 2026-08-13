@@ -8,12 +8,12 @@ use App\Exceptions\TenantIsMissingException;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserCheckOverride;
-use App\Support\Billing\Franquia;
-use App\Support\Billing\FranquiaStatus;
+use App\Support\Billing\Allowance;
+use App\Support\Billing\AllowanceStatus;
 use App\Support\TenantManager;
+use Modules\CheckerApi\Exceptions\AllowanceExhaustedException;
 use Modules\CheckerApi\Exceptions\CheckBlockedForUserException;
 use Modules\CheckerApi\Exceptions\CheckUnavailableException;
-use Modules\CheckerApi\Exceptions\FranquiaExhaustedException;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
 use Modules\CheckerApi\Support\CheckAvailability;
@@ -47,7 +47,7 @@ class ExecutarCheck
         private readonly ReserveCredit $reserveCredit,
         private readonly ConfirmHold $confirmHold,
         private readonly ReleaseHold $releaseHold,
-        private readonly Franquia $franquia,
+        private readonly Allowance $allowance,
     ) {}
 
     public function handle(Check $check, CheckInput $input, ?User $user = null): CheckExecution
@@ -70,7 +70,7 @@ class ExecutarCheck
         }
 
         $hold = null;
-        $consumesFranquia = false;
+        $consumesAllowance = false;
 
         if ($override instanceof UserCheckOverride && $override->granted) {
             // Comp: grátis, ganha de plano/franquia/preço — não consome a franquia do plano.
@@ -78,17 +78,17 @@ class ExecutarCheck
             $price = $override instanceof UserCheckOverride
                 ? $override->price_cents ?? $check->price_cents
                 : $check->price_cents;
-            $franquia = $this->franquia->for($team, $check);
+            $allowance = $this->allowance->for($team, $check);
 
-            if ($franquia instanceof FranquiaStatus && $franquia->hasRemaining()) {
+            if ($allowance instanceof AllowanceStatus && $allowance->hasRemaining()) {
                 // Plano cobre e há franquia (ilimitado ou dentro do teto) — grátis sob o plano.
-                $consumesFranquia = true;
+                $consumesAllowance = true;
             } elseif ($price > 0) {
                 // Não coberto, ou franquia esgotada, mas há preço em crédito — cobra crédito.
                 $hold = $this->reserveCredit->handle($team, $price);
-            } elseif ($franquia instanceof FranquiaStatus) {
+            } elseif ($allowance instanceof AllowanceStatus) {
                 // Coberto pelo plano, franquia esgotada, e o check não tem preço em crédito — bloqueia.
-                throw FranquiaExhaustedException::for($check);
+                throw AllowanceExhaustedException::for($check);
             }
             // else: não coberto e preço 0 — grátis.
         }
@@ -105,7 +105,7 @@ class ExecutarCheck
                 'check_id' => $check->id,
                 'user_id' => $user?->id,
                 'outcome' => $result->outcome(),
-                'consumed_franquia' => $consumesFranquia,
+                'consumed_franquia' => $consumesAllowance,
                 'duration_ms' => $durationMs,
                 'input_masked' => $input->masked(),
                 'result' => $result->isSuccess() ? $result->data() : null,

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Support\Billing;
 
 /**
- * A team's franquia (usage allowance) for one check, in the current period.
+ * A team's usage allowance for one check, in the current period.
  *
  * `quota` mirrors `PlanCheck::quota`: null means unlimited, an int means the
  * plan includes that many successful executions before the period resets.
  */
-final readonly class FranquiaStatus
+final readonly class AllowanceStatus
 {
     public function __construct(public ?int $quota, public int $used) {}
 

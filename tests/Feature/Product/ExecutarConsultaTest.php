@@ -110,7 +110,7 @@ class ExecutarConsultaTest extends TestCase
     }
 
     /**
-     * No plan covers this check (no franquia, no PlanSubscription at all) and
+     * No plan covers this check (no allowance, no PlanSubscription at all) and
      * the wallet was never funded, so ReserveCredit refuses with
      * InsufficientBalanceException. Written to fail first against a missing
      * catch — without it, this 500s instead of showing a friendly message.

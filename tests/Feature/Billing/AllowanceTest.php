@@ -7,7 +7,7 @@ namespace Tests\Feature\Billing;
 use App\Models\PlanCheck;
 use App\Models\PlanSubscription;
 use App\Models\Team;
-use App\Support\Billing\Franquia;
+use App\Support\Billing\Allowance;
 use App\Support\Billing\Plan;
 use App\Support\TenantManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,12 +17,12 @@ use Modules\CheckerApi\Models\CheckExecution;
 use Tests\TestCase;
 
 /**
- * Franquia answers whether a team's plan covers a check and how much of the
+ * Allowance answers whether a team's plan covers a check and how much of the
  * period's allowance is already used. Usage is derived from CheckExecution
  * history, not a separate counter, so these tests pin down what counts:
  * only successes, only inside the current paid (or calendar) period.
  */
-class FranquiaTest extends TestCase
+class AllowanceTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -40,7 +40,7 @@ class FranquiaTest extends TestCase
             'consumed_franquia' => true,
         ]);
 
-        $status = resolve(Franquia::class)->for($team, $check);
+        $status = resolve(Allowance::class)->for($team, $check);
 
         $this->assertNotNull($status);
         $this->assertSame(10, $status->quota);
@@ -64,7 +64,7 @@ class FranquiaTest extends TestCase
             'consumed_franquia' => true,
         ]);
 
-        $status = resolve(Franquia::class)->for($team, $check);
+        $status = resolve(Allowance::class)->for($team, $check);
 
         $this->assertNotNull($status);
         $this->assertTrue($status->isUnlimited());
@@ -80,7 +80,7 @@ class FranquiaTest extends TestCase
 
         resolve(TenantManager::class)->set($team);
 
-        $status = resolve(Franquia::class)->for($team, $check);
+        $status = resolve(Allowance::class)->for($team, $check);
 
         $this->assertNull($status);
     }
@@ -109,7 +109,7 @@ class FranquiaTest extends TestCase
             'outcome' => ProviderOutcome::Failed,
         ]);
 
-        $status = resolve(Franquia::class)->for($team, $check);
+        $status = resolve(Allowance::class)->for($team, $check);
 
         $this->assertNotNull($status);
         $this->assertSame(1, $status->used);
@@ -143,7 +143,7 @@ class FranquiaTest extends TestCase
             'consumed_franquia' => true,
         ]);
 
-        $status = resolve(Franquia::class)->for($team, $check);
+        $status = resolve(Allowance::class)->for($team, $check);
 
         $this->assertNotNull($status);
         $this->assertSame(1, $status->used);
@@ -176,7 +176,7 @@ class FranquiaTest extends TestCase
             'consumed_franquia' => true,
         ]);
 
-        $status = resolve(Franquia::class)->for($team, $check);
+        $status = resolve(Allowance::class)->for($team, $check);
 
         $this->assertNotNull($status);
         $this->assertSame(1, $status->used);

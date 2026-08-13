@@ -7,7 +7,7 @@ namespace Modules\CheckerApi\Exceptions;
 use Modules\CheckerApi\Models\Check;
 use RuntimeException;
 
-final class FranquiaExhaustedException extends RuntimeException
+final class AllowanceExhaustedException extends RuntimeException
 {
     public static function for(Check $check): self
     {

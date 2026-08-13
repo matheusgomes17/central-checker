@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\CheckerApi\Models\Check;
 
 /**
- * Links a plan to a check with a quota (franquia) — how many times the plan
+ * Links a plan to a check with a quota (allowance) — how many times the plan
  * includes that check before billing charges per use.
  *
  * Global catalog config, like `Plan` and `Check`: the operator defines which

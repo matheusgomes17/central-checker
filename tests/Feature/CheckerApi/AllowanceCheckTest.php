@@ -7,7 +7,7 @@ use App\Models\PlanCheck;
 use App\Models\PlanSubscription;
 use App\Models\Team;
 use App\Support\TenantManager;
-use Modules\CheckerApi\Exceptions\FranquiaExhaustedException;
+use Modules\CheckerApi\Exceptions\AllowanceExhaustedException;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
 use Modules\CheckerApi\Support\CheckInput;
@@ -20,8 +20,8 @@ use Modules\Wallet\Models\Wallet;
 use Modules\Wallet\Models\WalletTransaction;
 
 /**
- * Team on the 'pro' plan, active subscription — the period Franquia anchors
- * on. TenantManager is set so ExecutarCheck and Franquia both resolve this
+ * Team on the 'pro' plan, active subscription — the period Allowance anchors
+ * on. TenantManager is set so ExecutarCheck and Allowance both resolve this
  * team as the current tenant.
  */
 function setupPlanTeam(): Team
@@ -33,7 +33,7 @@ function setupPlanTeam(): Team
     return $team;
 }
 
-function franquiaInput(): CheckInput
+function allowanceInput(): CheckInput
 {
     return CheckInput::fromArray(['cpf' => '12345678901']);
 }
@@ -44,9 +44,9 @@ it('franquia ilimitada executa sem tocar a carteira', function (): void {
     $check = Check::factory()->create(['provider_key' => 'fake']);
     PlanCheck::factory()->unlimited()->create(['plan' => 'pro', 'check_id' => $check->id]);
 
-    resolve(ExecutarCheck::class)->handle($check, franquiaInput());
-    resolve(ExecutarCheck::class)->handle($check, franquiaInput());
-    resolve(ExecutarCheck::class)->handle($check, franquiaInput());
+    resolve(ExecutarCheck::class)->handle($check, allowanceInput());
+    resolve(ExecutarCheck::class)->handle($check, allowanceInput());
+    resolve(ExecutarCheck::class)->handle($check, allowanceInput());
 
     expect(CheckExecution::query()->count())->toBe(3)
         ->and(WalletTransaction::query()->count())->toBe(0);
@@ -58,11 +58,11 @@ it('dentro da franquia executa grátis e esgota no teto', function (): void {
     $check = Check::factory()->create(['provider_key' => 'fake']);
     PlanCheck::factory()->create(['plan' => 'pro', 'check_id' => $check->id, 'quota' => 2]);
 
-    resolve(ExecutarCheck::class)->handle($check, franquiaInput());
-    resolve(ExecutarCheck::class)->handle($check, franquiaInput());
+    resolve(ExecutarCheck::class)->handle($check, allowanceInput());
+    resolve(ExecutarCheck::class)->handle($check, allowanceInput());
 
-    expect(fn () => resolve(ExecutarCheck::class)->handle($check, franquiaInput()))
-        ->toThrow(FranquiaExhaustedException::class);
+    expect(fn () => resolve(ExecutarCheck::class)->handle($check, allowanceInput()))
+        ->toThrow(AllowanceExhaustedException::class);
 
     expect(CheckExecution::query()->count())->toBe(2)
         ->and(WalletTransaction::query()->count())->toBe(0);
@@ -75,10 +75,10 @@ it('franquia esgotada cai para crédito quando o check tem preço', function ():
     $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
     PlanCheck::factory()->create(['plan' => 'pro', 'check_id' => $check->id, 'quota' => 1]);
 
-    resolve(ExecutarCheck::class)->handle($check, franquiaInput());
+    resolve(ExecutarCheck::class)->handle($check, allowanceInput());
     expect(Wallet::forTeam($team)->balance_cents)->toBe(1000);
 
-    resolve(ExecutarCheck::class)->handle($check, franquiaInput());
+    resolve(ExecutarCheck::class)->handle($check, allowanceInput());
     expect(Wallet::forTeam($team)->balance_cents)->toBe(650);
 });
 
@@ -91,8 +91,8 @@ it('nada encontrado sob franquia não consome o teto', function (): void {
     $check = Check::factory()->create(['provider_key' => 'fake']);
     PlanCheck::factory()->create(['plan' => 'pro', 'check_id' => $check->id, 'quota' => 1]);
 
-    $first = resolve(ExecutarCheck::class)->handle($check, franquiaInput());
-    $second = resolve(ExecutarCheck::class)->handle($check, franquiaInput());
+    $first = resolve(ExecutarCheck::class)->handle($check, allowanceInput());
+    $second = resolve(ExecutarCheck::class)->handle($check, allowanceInput());
 
     expect($first->outcome->value)->toBe('no_data')
         ->and($second->outcome->value)->toBe('success')
@@ -106,7 +106,7 @@ it('check não coberto pelo plano segue no crédito normal', function (): void {
     $check = Check::factory()->priced(350)->create(['provider_key' => 'fake']);
     // Nenhum PlanCheck ligando 'pro' a este check — não coberto.
 
-    resolve(ExecutarCheck::class)->handle($check, franquiaInput());
+    resolve(ExecutarCheck::class)->handle($check, allowanceInput());
 
     expect(Wallet::forTeam($team)->balance_cents)->toBe(650);
 });

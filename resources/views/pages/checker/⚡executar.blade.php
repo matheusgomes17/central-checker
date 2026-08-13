@@ -16,9 +16,9 @@ use Modules\Wallet\Exceptions\InsufficientBalanceException;
 use Modules\Wallet\Models\Wallet;
 use Modules\CheckerApi\Enums\CheckStatus;
 use Modules\CheckerApi\Enums\ProviderOutcome;
+use Modules\CheckerApi\Exceptions\AllowanceExhaustedException;
 use Modules\CheckerApi\Exceptions\CheckBlockedForUserException;
 use Modules\CheckerApi\Exceptions\CheckUnavailableException;
-use Modules\CheckerApi\Exceptions\FranquiaExhaustedException;
 use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
 use Modules\CheckerApi\Support\CheckAvailability;
@@ -86,7 +86,7 @@ new #[Title('Executar consulta')] class extends Component {
             $this->addError('checkId', __('Esta consulta está em manutenção no momento. Tente de novo mais tarde.'));
 
             return;
-        } catch (FranquiaExhaustedException) {
+        } catch (AllowanceExhaustedException) {
             $this->addError('checkId', __('A franquia do plano para esta consulta acabou e ela não aceita cobrança avulsa. Fale com o administrador do time sobre o plano.'));
 
             return;
@@ -141,7 +141,7 @@ new #[Title('Executar consulta')] class extends Component {
     }
 
     /**
-     * What the run cost, in words: covered by the plan's franquia, free
+     * What the run cost, in words: covered by the plan's allowance, free
      * because the check has no price, the amount charged to the wallet, or
      * "not charged" for the two outcomes that never bill.
      */
