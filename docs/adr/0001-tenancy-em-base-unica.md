@@ -31,6 +31,13 @@ Atravessar o escopo é possível e é explícito: `acrossTenants()` na consulta 
 `withoutTenancy()` num bloco. Ambos aparecem no ponto de uso, que é onde a
 revisão consegue ver.
 
+De onde vem o tenant numa requisição web é uma escolha separada desta ADR:
+`TenantManager::current()` resolve de forma lazy do usuário autenticado
+(`auth()->user()->currentTeam`), nunca da URL — as rotas do produto não
+carregam o slug do time, e trocar de time é uma ação do seletor
+(`⚡team-switcher`), não uma navegação. Isso não muda o modelo de escopo
+descrito aqui; é só a fonte do "qual time é o atual" no contexto web.
+
 ## Consequências
 
 - Todo model de domínio nasce escopado. Quem não deve ser precisa de entrada
