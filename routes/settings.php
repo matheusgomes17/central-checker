@@ -13,8 +13,9 @@ Route::middleware(['auth'])->group(function (): void {
 });
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::livewire('settings/appearance', 'pages::settings.appearance')->name('appearance.edit');
-
+    // Sem rota de aparência: o produto é dark-first por decisão (ver
+    // resources/css/app.css); um toggle de tema aqui seria um controle que
+    // não faz nada — o claro existe só no painel do operador.
     Route::livewire('settings/security', 'pages::settings.security')
         ->middleware(
             when(

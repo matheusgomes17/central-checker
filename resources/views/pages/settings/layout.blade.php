@@ -8,15 +8,14 @@
             <flux:navlist.item :href="route('api-tokens.edit')" wire:navigate>{{ __('API tokens') }}</flux:navlist.item>
             <flux:navlist.item :href="route('webhooks.edit')" wire:navigate>{{ __('Webhooks') }}</flux:navlist.item>
             <flux:navlist.item :href="route('billing.edit')" wire:navigate>{{ __('Billing') }}</flux:navlist.item>
-            <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
         </flux:navlist>
     </div>
 
     <flux:separator class="md:hidden" />
 
     <div class="flex-1 self-stretch max-md:pt-6">
-        <flux:heading>{{ $heading ?? '' }}</flux:heading>
-        <flux:subheading>{{ $subheading ?? '' }}</flux:subheading>
+        <h2 class="font-display text-sm font-semibold tracking-widest text-white/70 uppercase">{{ $heading ?? '' }}</h2>
+        <p class="mt-1 text-sm text-white/55">{{ $subheading ?? '' }}</p>
 
         <div class="mt-5 w-full max-w-lg">
             {{ $slot }}

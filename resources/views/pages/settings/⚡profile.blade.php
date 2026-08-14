@@ -13,7 +13,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Profile settings')] class extends Component {
+new #[Title('Configurações de perfil')] class extends Component {
     use ProfileValidationRules, WithFileUploads;
 
     public string $name = '';
@@ -168,7 +168,7 @@ new #[Title('Profile settings')] class extends Component {
     <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your name and email address')">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <div class="flex items-center gap-6">
-                <div class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <div class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-fire-500/25 bg-zinc-100 dark:bg-zinc-800">
                     {{-- isPreviewable() antes de temporaryUrl(): o Livewire
                          recusa gerar preview de arquivo que não seja imagem, e
                          o upload rejeitado ainda está preso na propriedade
@@ -237,14 +237,10 @@ new #[Title('Profile settings')] class extends Component {
                 @endforeach
             </flux:select>
 
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-end">
-                    <flux:button variant="primary" type="submit" class="w-full" data-test="update-profile-button">
-                        {{ __('Save') }}
-                    </flux:button>
-                </div>
-
-            </div>
+            {{-- A única ação primária da tela leva o CTA de fogo do shell. --}}
+            <x-fire.cta type="submit" data-test="update-profile-button">
+                {{ __('Save') }}
+            </x-fire.cta>
         </form>
 
         @if ($this->showDeleteUser)

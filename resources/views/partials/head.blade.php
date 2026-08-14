@@ -12,4 +12,8 @@
 @fonts
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
-@fluxAppearance
+{{-- Sem @fluxAppearance de propósito: o produto é dark-first (ver
+     resources/css/app.css) e o html carrega class="dark" fixa nos layouts. O
+     script de aparência do Flux removia a classe conforme a preferência do
+     sistema, rendendo componentes claros sobre o canvas escuro. O tema claro
+     existe só no painel do operador (Filament). --}}

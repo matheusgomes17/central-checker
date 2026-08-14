@@ -20,6 +20,20 @@ class ProfileUpdateTest extends TestCase
         $this->get(route('profile.edit'))->assertOk();
     }
 
+    public function test_profile_page_is_in_portuguese(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // O produto fala pt_BR; as configurações não podem ficar no inglês do
+        // starter.
+        $this->get(route('profile.edit'))
+            ->assertSee('Configurações')
+            ->assertSee('Perfil')
+            ->assertSee('Salvar')
+            ->assertSee('Fuso horário')
+            ->assertDontSee('Manage your profile and account settings');
+    }
+
     public function test_profile_information_can_be_updated(): void
     {
         $user = User::factory()->create();

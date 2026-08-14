@@ -76,7 +76,6 @@ class RouteAuthorizationTest extends TestCase
         'checker.history' => 'o escopo de time vem do middleware de membership; executions() e selected() filtram por user_id',
         'profile.edit' => 'edita a própria conta',
         'security.edit' => 'edita a própria segurança',
-        'appearance.edit' => 'preferência da própria conta',
         'notifications.edit' => 'preferências de notificação da própria conta',
         'api-tokens.edit' => 'tokens da própria conta, escopados ao time atual',
         'webhooks.edit' => 'endpoints do time atual; a policy manageWebhooks decide quem escreve',

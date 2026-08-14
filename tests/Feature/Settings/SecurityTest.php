@@ -42,7 +42,7 @@ class SecurityTest extends TestCase
 
         $response->assertSee('Passkeys');
         $response->assertSee('No passkeys yet');
-        $response->assertSee('Two-factor authentication');
+        $response->assertSee('Autenticação em duas etapas');
         $response->assertSee('Enable 2FA');
     }
 
