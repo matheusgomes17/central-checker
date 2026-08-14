@@ -417,20 +417,17 @@ new #[Title('Executar consulta')] class extends Component {
             </div>
 
             <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
-                {{-- Botão com gradiente de fogo próprio, em vez do
-                     variant="primary" plano usado no resto do produto. --}}
-                <button
+                <x-fire.cta
                     type="submit"
                     wire:loading.attr="disabled"
                     wire:target="execute"
                     data-test="executar-consulta"
-                    class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fire-400 via-fire-500 to-fire-600 px-6 font-display text-sm font-semibold tracking-wide text-white shadow-[0_0_20px_-4px_rgb(255_107_0_/_60%)] transition motion-safe:hover:scale-[1.01] motion-safe:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     <flux:icon.bolt wire:loading.remove wire:target="execute" class="size-4" />
                     <flux:icon.loading wire:loading wire:target="execute" class="size-4" />
                     <span wire:loading.remove wire:target="execute">{{ __('Executar consultas') }}</span>
                     <span wire:loading wire:target="execute">{{ __('Executando…') }}</span>
-                </button>
+                </x-fire.cta>
 
                 <p class="text-xs tracking-wide text-white/40" data-test="lgpd-note">
                     {{ __('Os documentos são usados só para estas consultas e guardados mascarados.') }}

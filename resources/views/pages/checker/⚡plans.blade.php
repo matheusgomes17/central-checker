@@ -261,13 +261,13 @@ new #[Title('Planos')] class extends Component {
                         </div>
 
                         @if ($this->canManage && $this->billing->plan()->key !== $key)
-                            <button
+                            <x-fire.cta
                                 type="button"
                                 wire:click="subscribe('{{ $key }}')"
                                 wire:loading.attr="disabled"
                                 wire:target="subscribe('{{ $key }}')"
                                 data-test="plano-assinar-{{ $key }}"
-                                class="mt-auto inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fire-400 via-fire-500 to-fire-600 px-5 font-display text-sm font-semibold text-white shadow-[0_0_20px_-4px_rgb(255_107_0_/_60%)] transition motion-safe:hover:scale-[1.01] motion-safe:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                                class="mt-auto w-full"
                             >
                                 <flux:icon.fire wire:loading.remove wire:target="subscribe('{{ $key }}')" class="size-4" />
                                 <flux:icon.loading wire:loading wire:target="subscribe('{{ $key }}')" class="size-4" />
@@ -275,7 +275,7 @@ new #[Title('Planos')] class extends Component {
                                     {{ $this->billing->subscribed() ? __('Renovar :plano', ['plano' => $plan->name]) : __('Assinar :plano', ['plano' => $plan->name]) }}
                                 </span>
                                 <span wire:loading wire:target="subscribe('{{ $key }}')">{{ __('Gerando…') }}</span>
-                            </button>
+                            </x-fire.cta>
                         @endif
                     </div>
                 @endforeach

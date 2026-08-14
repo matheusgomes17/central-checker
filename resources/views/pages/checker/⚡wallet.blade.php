@@ -235,20 +235,19 @@ new #[Title('Carteira')] class extends Component {
                         <p class="text-sm text-flame-danger" data-test="erro-valor">{{ $message }}</p>
                     @enderror
 
-                    {{-- A única mancha de laranja saturado da tela além do saldo:
-                         o botão-assinatura com gradiente de fogo. --}}
-                    <button
+                    {{-- A única mancha de laranja saturado da tela além do saldo. --}}
+                    <x-fire.cta
                         type="submit"
                         wire:loading.attr="disabled"
                         wire:target="recharge"
                         data-test="gerar-pix"
-                        class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fire-400 via-fire-500 to-fire-600 px-5 font-display text-sm font-semibold tracking-wide text-white shadow-[0_0_20px_-4px_rgb(255_107_0_/_60%)] transition motion-safe:hover:scale-[1.01] motion-safe:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                        class="w-full"
                     >
                         <flux:icon.qr-code wire:loading.remove wire:target="recharge" class="size-4" />
                         <flux:icon.loading wire:loading wire:target="recharge" class="size-4" />
                         <span wire:loading.remove wire:target="recharge">{{ __('Gerar Pix') }}</span>
                         <span wire:loading wire:target="recharge">{{ __('Gerando…') }}</span>
-                    </button>
+                    </x-fire.cta>
                 </form>
             @else
                 <p class="self-center text-sm text-white/55 lg:border-l lg:border-fire-500/14 lg:pl-8" data-test="sem-permissao-recarga">
