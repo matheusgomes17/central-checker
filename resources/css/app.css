@@ -99,6 +99,25 @@
     animation: ignite 700ms ease-out;
 }
 
+/* Segmentos da barra de composição do lote acendem da esquerda pra direita,
+   como um pavio. O fill-mode both segura o scaleX(0) durante o delay
+   escalonado por segmento; sem animação (motion-reduce) o transform fica no
+   padrão e a barra aparece pronta. */
+@keyframes fuse {
+    from {
+        transform: scaleX(0);
+    }
+
+    to {
+        transform: scaleX(1);
+    }
+}
+
+@utility animate-fuse {
+    animation: fuse 600ms ease-out both;
+    transform-origin: left;
+}
+
 /* Pulso sutil do ícone de chama na sidebar — só a escala, sem opacidade, para
    não competir com o glow do drop-shadow ao redor dele. */
 @keyframes flame-pulse {
