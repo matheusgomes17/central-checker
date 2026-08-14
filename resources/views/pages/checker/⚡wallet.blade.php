@@ -169,55 +169,80 @@ new #[Title('Carteira')] class extends Component {
     <div class="mx-auto flex max-w-3xl flex-col gap-8">
         <div>
             <p class="text-xs font-medium tracking-widest text-white/55 uppercase">{{ __('Carteira') }}</p>
-            <h1 class="font-display text-2xl font-semibold text-white">{{ __('Saldo e recarga') }}</h1>
+            <h1 class="text-fire-gradient font-display text-3xl font-bold">{{ __('Saldo e recarga') }}</h1>
             <p class="mt-1 text-sm text-white/55">{{ __('Acompanhe o saldo do time e recarregue via Pix quando precisar.') }}</p>
         </div>
 
-        <x-fire.stat
-            :label="__('Saldo disponível')"
-            :value="Number::currency($this->balance / 100, in: 'BRL', locale: 'pt_BR')"
-            :hint="__('Descontado a cada consulta executada')"
-            tone="fire"
-        />
+        {{-- Saldo e recarga no mesmo painel: são um gesto só ("olhei, faltou,
+             recarreguei"). O gradiente do número começa no fire-500, sem o
+             fire-400 amarelado — em corpo grande o tom claro vira amarelo
+             estourado sobre o canvas escuro. --}}
+        <div class="grid gap-8 rounded-xl border border-fire-500/14 bg-white/2 p-6 lg:grid-cols-[1fr_20rem] lg:p-8">
+            <div class="self-center">
+                <div class="flex items-center gap-1.5 text-xs font-medium tracking-widest text-white/55 uppercase">
+                    <flux:icon.fire class="size-3.5 shrink-0 text-fire-500" />
+                    <span>{{ __('Saldo disponível') }}</span>
+                </div>
 
-        @if ($this->canManage)
-            <div class="space-y-3">
-                <flux:heading size="sm">{{ __('Recarregar via Pix') }}</flux:heading>
+                <p class="mt-3 bg-gradient-to-br from-fire-500 to-fire-600 bg-clip-text font-display text-4xl font-bold tracking-tight tabular-nums text-transparent">
+                    {{ Number::currency($this->balance / 100, in: 'BRL', locale: 'pt_BR') }}
+                </p>
 
-                <form wire:submit="recharge" class="flex flex-col gap-4 sm:flex-row sm:items-end">
-                    <div class="flex-1">
-                        <flux:input.group>
-                            <flux:input.group.prefix>{{ __('R$') }}</flux:input.group.prefix>
-                            <flux:input
-                                wire:model="amount"
-                                :label="__('Valor da recarga')"
-                                placeholder="50,00"
-                                inputmode="decimal"
-                                class:input="font-mono"
-                                data-test="recarga-valor-input"
-                            />
-                        </flux:input.group>
+                <p class="mt-2 text-xs tracking-wide text-white/55">{{ __('Descontado a cada consulta executada') }}</p>
+            </div>
 
-                        <p class="mt-1 text-xs text-white/40" data-test="recarga-intervalo">
-                            {{ __('Entre :min e :max', [
-                                'min' => Number::currency($this->minCents / 100, in: 'BRL', locale: 'pt_BR'),
-                                'max' => Number::currency($this->maxCents / 100, in: 'BRL', locale: 'pt_BR'),
-                            ]) }}
-                        </p>
+            @if ($this->canManage)
+                <form wire:submit="recharge" class="space-y-3 lg:border-l lg:border-fire-500/14 lg:pl-8">
+                    <p class="text-xs font-medium tracking-widest text-white/55 uppercase">{{ __('Recarregar via Pix') }}</p>
 
-                        @error('amount')
-                            <p class="mt-1 text-sm text-flame-danger" data-test="erro-valor">{{ $message }}</p>
-                        @enderror
+                    <div class="flex items-center rounded-lg border border-fire-500/14 bg-white/2 transition focus-within:border-fire-500/40 focus-within:ring-1 focus-within:ring-fire-500/30">
+                        <span class="pl-3 font-mono text-sm text-white/40" aria-hidden="true">{{ __('R$') }}</span>
+                        <input
+                            wire:model="amount"
+                            type="text"
+                            inputmode="decimal"
+                            placeholder="50,00"
+                            autocomplete="off"
+                            aria-label="{{ __('Valor da recarga') }}"
+                            data-test="recarga-valor-input"
+                            class="h-10 w-full bg-transparent px-2 font-mono text-sm text-white placeholder:text-white/25 focus:outline-none"
+                        />
                     </div>
 
-                    {{-- O botão da tela-assinatura: gradiente de fogo próprio, em vez do
-                         variant="primary" plano usado no resto do produto. --}}
+                    {{-- Atalhos dentro do intervalo do config (hoje R$ 10–1.000);
+                         se o intervalo mudar, o servidor recusa e o erro aparece
+                         aqui mesmo — os chips não precisam acompanhar. --}}
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (['25,00', '50,00', '100,00', '250,00'] as $preset)
+                            <button
+                                type="button"
+                                wire:click="$set('amount', '{{ $preset }}')"
+                                class="rounded-md border border-fire-500/14 bg-white/2 px-2.5 py-1 font-mono text-xs text-white/70 transition hover:border-fire-500/35 hover:text-white"
+                            >
+                                {{ __('R$ :v', ['v' => $preset]) }}
+                            </button>
+                        @endforeach
+                    </div>
+
+                    <p class="text-xs tracking-wide text-white/40" data-test="recarga-intervalo">
+                        {{ __('Entre :min e :max', [
+                            'min' => Number::currency($this->minCents / 100, in: 'BRL', locale: 'pt_BR'),
+                            'max' => Number::currency($this->maxCents / 100, in: 'BRL', locale: 'pt_BR'),
+                        ]) }}
+                    </p>
+
+                    @error('amount')
+                        <p class="text-sm text-flame-danger" data-test="erro-valor">{{ $message }}</p>
+                    @enderror
+
+                    {{-- A única mancha de laranja saturado da tela além do saldo:
+                         o botão-assinatura com gradiente de fogo. --}}
                     <button
                         type="submit"
                         wire:loading.attr="disabled"
                         wire:target="recharge"
                         data-test="gerar-pix"
-                        class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fire-400 via-fire-500 to-fire-600 px-5 font-display text-sm font-semibold text-white shadow-[0_0_20px_-4px_rgb(255_107_0_/_60%)] transition motion-safe:hover:scale-[1.01] motion-safe:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                        class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fire-400 via-fire-500 to-fire-600 px-5 font-display text-sm font-semibold tracking-wide text-white shadow-[0_0_20px_-4px_rgb(255_107_0_/_60%)] transition motion-safe:hover:scale-[1.01] motion-safe:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <flux:icon.qr-code wire:loading.remove wire:target="recharge" class="size-4" />
                         <flux:icon.loading wire:loading wire:target="recharge" class="size-4" />
@@ -225,8 +250,14 @@ new #[Title('Carteira')] class extends Component {
                         <span wire:loading wire:target="recharge">{{ __('Gerando…') }}</span>
                     </button>
                 </form>
-            </div>
+            @else
+                <p class="self-center text-sm text-white/55 lg:border-l lg:border-fire-500/14 lg:pl-8" data-test="sem-permissao-recarga">
+                    {{ __('Fale com quem administra a cobrança do time para recarregar a carteira.') }}
+                </p>
+            @endif
+        </div>
 
+        @if ($this->canManage)
             @if ($this->intent)
                 <div
                     wire:key="pix-{{ $this->intent->id }}"
@@ -296,15 +327,17 @@ new #[Title('Carteira')] class extends Component {
                     </div>
                 </div>
             @endif
-        @else
-            <p class="text-sm text-white/55" data-test="sem-permissao-recarga">
-                {{ __('Fale com quem administra a cobrança do time para recarregar a carteira.') }}
-            </p>
         @endif
 
         <div class="space-y-3">
-            <flux:heading size="sm">{{ __('Razão') }}</flux:heading>
+            <div class="flex items-baseline justify-between gap-2">
+                <h2 class="font-display text-sm font-semibold tracking-widest text-white/70 uppercase">{{ __('Extrato') }}</h2>
+                <p class="text-xs tracking-wide text-white/40">{{ __('Últimos 20 lançamentos') }}</p>
+            </div>
 
+            {{-- Cor aqui é direção do dinheiro, não decoração: crédito em verde,
+                 débito neutro — débito é a rotina da carteira e não pode gritar
+                 em laranja vinte vezes numa lista. --}}
             <div class="rounded-xl border border-fire-500/14 bg-white/2 overflow-hidden">
                 @forelse ($this->ledger as $entry)
                     @php
@@ -319,24 +352,24 @@ new #[Title('Carteira')] class extends Component {
                     @endphp
                     <div
                         wire:key="razao-{{ $entry->id }}"
-                        class="flex items-center justify-between gap-4 p-4 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
+                        class="flex items-center justify-between gap-4 p-4 transition hover:bg-white/3 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
                         data-test="razao-linha"
                     >
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $isCredit ? 'border-ok/30 bg-ok/10 text-ok' : 'border-fire-500/30 bg-fire-500/10 text-fire-400' }}">
-                                    {{ $typeLabel }}
-                                </span>
-                                <span class="text-sm text-white/80">{{ $entry->description }}</span>
+                        <div class="flex min-w-0 items-center gap-3">
+                            <span aria-hidden="true" class="size-1.5 shrink-0 rounded-full {{ $isCredit ? 'bg-ok' : 'bg-white/25' }}"></span>
+                            <div class="min-w-0">
+                                <p class="truncate text-sm text-white/85">{{ $entry->description }}</p>
+                                <p class="text-xs tracking-wide text-white/40">
+                                    {{ $typeLabel }} · <time datetime="{{ $entry->created_at->toIso8601String() }}">{{ $entry->created_at->format('d/m/Y H:i') }}</time>
+                                </p>
                             </div>
-                            <p class="text-xs text-white/40">{{ $entry->created_at->format('d/m/Y H:i') }}</p>
                         </div>
 
-                        <div class="text-right">
-                            <p class="font-mono text-sm {{ $isCredit ? 'text-ok' : 'text-fire-400' }}" data-test="razao-valor">
+                        <div class="shrink-0 text-right">
+                            <p class="font-mono text-sm tabular-nums {{ $isCredit ? 'text-ok' : 'text-white/75' }}" data-test="razao-valor">
                                 {{ $isCredit ? '+' : '−' }} {{ Number::currency(abs($entry->amount_cents) / 100, in: 'BRL', locale: 'pt_BR') }}
                             </p>
-                            <p class="text-xs text-white/40">
+                            <p class="text-xs tabular-nums text-white/40">
                                 {{ __('Saldo:') }} {{ Number::currency($entry->balance_after_cents / 100, in: 'BRL', locale: 'pt_BR') }}
                             </p>
                         </div>
@@ -350,23 +383,25 @@ new #[Title('Carteira')] class extends Component {
         </div>
 
         <div class="space-y-3">
-            <flux:heading size="sm">{{ __('Recargas') }}</flux:heading>
+            <h2 class="font-display text-sm font-semibold tracking-widest text-white/70 uppercase">{{ __('Recargas') }}</h2>
 
             <div class="rounded-xl border border-fire-500/14 bg-white/2 overflow-hidden">
                 @forelse ($this->recharges as $recharge)
                     <div
                         wire:key="recarga-{{ $recharge->id }}"
-                        class="flex items-center justify-between gap-4 p-4 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
+                        class="flex items-center justify-between gap-4 p-4 transition hover:bg-white/3 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
                         data-test="recarga-linha"
                     >
-                        <div class="space-y-1">
-                            <p class="text-sm text-white/80">{{ $recharge->created_at->format('d/m/Y') }}</p>
+                        <div class="flex items-center gap-3">
                             <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $recharge->status === PaymentStatus::Paid ? 'border-ok/30 bg-ok/10 text-ok' : 'border-white/14 bg-white/5 text-white/55' }}">
                                 {{ $recharge->status === PaymentStatus::Paid ? __('Paga') : __('Pendente') }}
                             </span>
+                            <p class="text-sm text-white/80">
+                                <time datetime="{{ $recharge->created_at->toIso8601String() }}">{{ $recharge->created_at->format('d/m/Y') }}</time>
+                            </p>
                         </div>
 
-                        <p class="font-mono text-sm text-white" data-test="recarga-valor">
+                        <p class="font-mono text-sm tabular-nums text-white" data-test="recarga-valor">
                             {{ Number::currency($recharge->amount_cents / 100, in: 'BRL', locale: 'pt_BR') }}
                         </p>
                     </div>
