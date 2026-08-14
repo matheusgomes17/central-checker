@@ -11,7 +11,9 @@
     // ainda sabe o que o número significa.
     $numberToneClasses = match ($tone) {
         'ok' => 'text-ok',
-        'fire' => 'bg-gradient-to-br from-fire-400 to-fire-600 bg-clip-text text-transparent',
+        // fire-500→600, sem o fire-400: em número grande o tom claro lê como
+        // amarelo estourado sobre o canvas escuro (ver memória do projeto).
+        'fire' => 'bg-gradient-to-br from-fire-500 to-fire-600 bg-clip-text text-transparent',
         default => 'text-white',
     };
 

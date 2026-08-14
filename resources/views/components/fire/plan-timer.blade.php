@@ -32,7 +32,7 @@
         aria-label="{{ $label }}"
     >
         <div
-            class="h-full rounded-full bg-gradient-to-r from-fire-400 to-fire-600 motion-safe:transition-[width] motion-safe:duration-500"
+            class="h-full rounded-full bg-gradient-to-r from-fire-500 to-fire-600 motion-safe:transition-[width] motion-safe:duration-500"
             style="width: {{ $percentage }}%"
         ></div>
     </div>

@@ -174,6 +174,27 @@ class HistoryTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_each_execution_row_carries_a_stable_anchor(): void
+    {
+        [$user, $team] = $this->memberOf();
+        $check = Check::factory()->create();
+
+        $execution = CheckExecution::factory()->create([
+            'team_id' => $team->id,
+            'check_id' => $check->id,
+            'user_id' => $user->id,
+            'outcome' => ProviderOutcome::Success,
+            'input_masked' => ['cpf' => '123******01'],
+        ]);
+
+        $this->actingAs($user);
+
+        // A âncora é o alvo dos links "ver no histórico" da tela de executar;
+        // some daqui e os links quebram em silêncio.
+        Livewire::test('pages::checker.history')
+            ->assertSeeHtml('id="execucao-'.$execution->id.'"');
+    }
+
     /**
      * @return array{0: User, 1: Team}
      */

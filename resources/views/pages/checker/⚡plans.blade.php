@@ -190,13 +190,15 @@ new #[Title('Planos')] class extends Component {
     <div class="mx-auto flex max-w-5xl flex-col gap-8">
         <div>
             <p class="text-xs font-medium tracking-widest text-white/55 uppercase">{{ __('Planos') }}</p>
-            <h1 class="font-display text-2xl font-semibold text-white">{{ __('Plano do time e assinatura via Pix') }}</h1>
+            <h1 class="text-fire-gradient font-display text-3xl font-bold">{{ __('Plano do time e assinatura via Pix') }}</h1>
             <p class="mt-1 text-sm text-white/55">{{ __('Compare os planos e veja quantas consultas cada um inclui por mês.') }}</p>
         </div>
 
         <div class="rounded-xl border border-fire-500/14 bg-white/2 p-6" data-test="plano-atual">
             <div class="flex flex-wrap items-center gap-2">
-                <flux:heading>{{ $this->billing->plan()->name }}</flux:heading>
+                {{-- Texto explícito, não flux:heading: o heading do Flux rende
+                     quase invisível sobre o canvas escuro deste shell. --}}
+                <span class="font-display text-lg font-semibold text-white">{{ $this->billing->plan()->name }}</span>
                 <flux:badge size="sm" :color="$this->billing->status()->color()">
                     {{ $this->billing->status()->label() }}
                 </flux:badge>
@@ -222,7 +224,7 @@ new #[Title('Planos')] class extends Component {
         </div>
 
         <div class="space-y-3">
-            <flux:heading size="sm">{{ __('Planos disponíveis') }}</flux:heading>
+            <h2 class="font-display text-sm font-semibold tracking-widest text-white/70 uppercase">{{ __('Planos disponíveis') }}</h2>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 @foreach ($this->plans as $key => $plan)
@@ -233,7 +235,7 @@ new #[Title('Planos')] class extends Component {
                     >
                         <div>
                             <div class="flex items-center justify-between gap-2">
-                                <flux:heading size="sm">{{ $plan->name }}</flux:heading>
+                                <span class="font-display font-semibold text-white">{{ $plan->name }}</span>
 
                                 @if ($this->billing->plan()->key === $key)
                                     <flux:badge size="sm" color="green">{{ __('Plano atual') }}</flux:badge>

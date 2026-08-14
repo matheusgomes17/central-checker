@@ -315,14 +315,18 @@ new #[Title('Dashboard')] class extends Component {
                                 class="flex items-center justify-between gap-3 py-3 text-sm"
                                 data-test="transacao-recente-{{ $entry->id }}"
                             >
-                                <div>
-                                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium {{ $credito ? 'border-ok/30 bg-ok/10 text-ok' : 'border-fire-500/30 bg-fire-500/10 text-fire-400' }}">
-                                        {{ $rotuloTipo }}
-                                    </span>
-                                    <p class="mt-1 text-xs text-white/40">{{ $entry->created_at?->format('d/m H:i') }}</p>
+                                {{-- Cor é direção do dinheiro, como no extrato da
+                                     carteira: crédito verde, débito neutro — débito é
+                                     rotina e não pode gritar em laranja na lista. --}}
+                                <div class="flex items-center gap-3">
+                                    <span aria-hidden="true" class="size-1.5 shrink-0 rounded-full {{ $credito ? 'bg-ok' : 'bg-white/25' }}"></span>
+                                    <div>
+                                        <p class="text-sm text-white/85">{{ $rotuloTipo }}</p>
+                                        <p class="text-xs text-white/40">{{ $entry->created_at?->format('d/m H:i') }}</p>
+                                    </div>
                                 </div>
 
-                                <p class="font-mono text-sm {{ $credito ? 'text-ok' : 'text-fire-400' }}">
+                                <p class="font-mono text-sm tabular-nums {{ $credito ? 'text-ok' : 'text-white/75' }}">
                                     {{ $credito ? '+' : '−' }} {{ Number::currency(abs($entry->amount_cents) / 100, in: 'BRL', locale: 'pt_BR') }}
                                 </p>
                             </li>

@@ -98,7 +98,7 @@ new #[Title('Histórico de consultas')] class extends Component {
     <div class="mx-auto flex max-w-3xl flex-col gap-8">
         <div>
             <p class="text-xs font-medium tracking-widest text-white/55 uppercase">{{ __('Consultas') }}</p>
-            <h1 class="font-display text-2xl font-semibold text-white">{{ __('Histórico de consultas') }}</h1>
+            <h1 class="text-fire-gradient font-display text-3xl font-bold">{{ __('Histórico de consultas') }}</h1>
             <p class="mt-1 text-sm text-white/55">{{ __('Suas consultas, com a entrada sempre mascarada. Só você vê o resultado de cada uma.') }}</p>
         </div>
 
@@ -115,16 +115,15 @@ new #[Title('Histórico de consultas')] class extends Component {
                 <p class="font-display text-lg font-semibold text-white">{{ __('você ainda não rodou consultas') }}</p>
                 <p class="mt-1 text-sm text-white/55">{{ __('Execute a primeira e ela aparece aqui, com o resultado guardado só para você.') }}</p>
 
-                <flux:button
+                <x-fire.cta
                     :href="route('checker.execute')"
-                    variant="primary"
-                    icon="bolt"
                     wire:navigate
                     class="mt-4"
                     data-test="historico-comecar-agora"
                 >
+                    <flux:icon.bolt class="size-4" />
                     {{ __('Comece agora') }}
-                </flux:button>
+                </x-fire.cta>
             </div>
         @else
             <div class="space-y-3">
@@ -148,9 +147,13 @@ new #[Title('Histórico de consultas')] class extends Component {
                                 ->implode(', ');
                         @endphp
 
+                        {{-- O id é a âncora dos links "ver no histórico" da tela de
+                             executar; target: destaca a linha aterrissada e o
+                             scroll-mt desgruda ela do topo da viewport. --}}
                         <div
                             wire:key="execucao-{{ $execution->id }}"
-                            class="flex flex-wrap items-center justify-between gap-4 p-4 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
+                            id="execucao-{{ $execution->id }}"
+                            class="flex flex-wrap items-center justify-between gap-4 p-4 transition scroll-mt-24 target:bg-fire-500/8 hover:bg-white/3 {{ ! $loop->last ? 'border-b border-fire-500/14' : '' }}"
                             data-test="execucao-{{ $execution->id }}"
                         >
                             <div class="space-y-1">
@@ -218,7 +221,7 @@ new #[Title('Histórico de consultas')] class extends Component {
                 <dl class="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
                     @foreach ($this->selected->result ?? [] as $field => $value)
                         <div>
-                            <dt class="text-xs text-white/55 capitalize">{{ str_replace('_', ' ', (string) $field) }}</dt>
+                            <dt class="text-[0.65rem] font-medium tracking-widest text-white/45 uppercase">{{ str_replace('_', ' ', (string) $field) }}</dt>
                             <dd class="font-mono text-sm text-white">{{ is_scalar($value) ? $value : json_encode($value) }}</dd>
                         </div>
                     @endforeach
