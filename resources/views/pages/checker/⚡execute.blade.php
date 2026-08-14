@@ -24,6 +24,7 @@ use Modules\CheckerApi\Models\Check;
 use Modules\CheckerApi\Models\CheckExecution;
 use Modules\CheckerApi\Support\CheckAvailability;
 use Modules\CheckerApi\Support\CheckInput;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 new #[Title('Executar consulta')] class extends Component {
     /**
@@ -203,7 +204,7 @@ new #[Title('Executar consulta')] class extends Component {
      * behind #[Locked] the lookup must refuse a sibling team member's
      * execution on its own.
      *
-     * @return Collection<int, array{masked: string, status: string, result: ?array<string, mixed>, cost: ?string}>
+     * @return Collection<int, array{masked: string, status: string, result: ?array<string, mixed>, cost: ?string, execution_id: ?int}>
      */
     #[Computed]
     public function rows(): Collection
@@ -226,8 +227,70 @@ new #[Title('Executar consulta')] class extends Component {
                 'status' => $entry['status'],
                 'result' => $execution?->result,
                 'cost' => $execution instanceof CheckExecution ? $this->costLabelFor($execution) : null,
+                'execution_id' => $execution?->id,
             ];
         });
+    }
+
+    /**
+     * Human-readable label for a row status. Shared by the results list and
+     * the CSV export so the file always says the same thing as the screen.
+     */
+    public function outcomeLabel(string $status): string
+    {
+        return match ($status) {
+            'success' => __('Sucesso'),
+            'no_data' => __('Sem registro'),
+            'failed' => __('Falha'),
+            'invalid' => __('Inválido'),
+            'blocked' => __('Bloqueado'),
+            'insufficient' => __('Saldo insuficiente'),
+            'allowance_exhausted' => __('Franquia esgotada'),
+            'unavailable' => __('Em manutenção'),
+            default => $status,
+        };
+    }
+
+    /**
+     * Downloads the batch on screen as a semicolon-separated CSV. Reuses
+     * {@see self::rows()}, so the owner scoping and the masking are the same
+     * as the rendered list — the raw document never reaches the file.
+     */
+    public function exportCsv(): ?StreamedResponse
+    {
+        if ($this->results === []) {
+            return null;
+        }
+
+        $rows = $this->rows;
+
+        return response()->streamDownload(function () use ($rows): void {
+            $handle = fopen('php://output', 'w');
+
+            if ($handle === false) {
+                return;
+            }
+
+            // BOM para o Excel pt-BR reconhecer UTF-8 (Grátis, Inválido…);
+            // ponto-e-vírgula porque é o separador que o Excel pt-BR espera.
+            fwrite($handle, "\u{FEFF}");
+            fputcsv($handle, ['documento', 'desfecho', 'custo', 'resultado'], ';', '"', '\\');
+
+            foreach ($rows as $row) {
+                $result = collect($row['result'] ?? [])
+                    ->map(fn (mixed $value, string $field): string => $field.'='.(is_scalar($value) ? $value : json_encode($value)))
+                    ->implode(' | ');
+
+                fputcsv($handle, [
+                    $row['masked'],
+                    $this->outcomeLabel($row['status']),
+                    $row['cost'] ?? '',
+                    $result,
+                ], ';', '"', '\\');
+            }
+
+            fclose($handle);
+        }, 'lote-de-consultas.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     /**
@@ -437,7 +500,19 @@ new #[Title('Executar consulta')] class extends Component {
 
         @if (count($this->results) > 0)
             <div wire:key="lote-resultados" class="space-y-4 motion-safe:animate-ignite" data-test="resultado-lote">
-                <h2 class="font-display text-sm font-semibold tracking-widest text-white/70 uppercase">{{ __('Resultados') }}</h2>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="font-display text-sm font-semibold tracking-widest text-white/70 uppercase">{{ __('Resultados') }}</h2>
+
+                    <button
+                        type="button"
+                        wire:click="exportCsv"
+                        data-test="exportar-csv"
+                        class="inline-flex items-center gap-1.5 rounded-lg border border-fire-500/25 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:border-fire-500/50 hover:text-white"
+                    >
+                        <flux:icon.arrow-down-tray class="size-3.5" />
+                        {{ __('Exportar CSV') }}
+                    </button>
+                </div>
 
                 {{-- A barra "checker-stats" do checker legado: resumo em linha,
                      não um grid de cartões — o lote pode ter uma linha ou cem. --}}
@@ -493,16 +568,13 @@ new #[Title('Executar consulta')] class extends Component {
                 <div class="rounded-xl border border-fire-500/14 bg-white/2 overflow-hidden" data-test="lista-resultados">
                     @foreach ($this->rows as $index => $row)
                         @php
-                            [$outcomeLabel, $outcomeColor, $outcomeAccent] = match ($row['status']) {
-                                'success' => [__('Sucesso'), 'border-ok/30 bg-ok/10 text-ok', 'border-l-ok/60'],
-                                'no_data' => [__('Sem registro'), 'border-white/14 bg-white/5 text-white/55', 'border-l-white/20'],
-                                'failed' => [__('Falha'), 'border-flame-danger/30 bg-flame-danger/10 text-flame-danger', 'border-l-flame-danger/60'],
-                                'invalid' => [__('Inválido'), 'border-flame-warn/30 bg-flame-warn/10 text-flame-warn', 'border-l-flame-warn/60'],
-                                'blocked' => [__('Bloqueado'), 'border-flame-warn/30 bg-flame-warn/10 text-flame-warn', 'border-l-flame-warn/60'],
-                                'insufficient' => [__('Saldo insuficiente'), 'border-flame-warn/30 bg-flame-warn/10 text-flame-warn', 'border-l-flame-warn/60'],
-                                'allowance_exhausted' => [__('Franquia esgotada'), 'border-flame-warn/30 bg-flame-warn/10 text-flame-warn', 'border-l-flame-warn/60'],
-                                'unavailable' => [__('Em manutenção'), 'border-flame-warn/30 bg-flame-warn/10 text-flame-warn', 'border-l-flame-warn/60'],
-                                default => [$row['status'], 'border-white/14 bg-white/5 text-white/55', 'border-l-white/20'],
+                            $outcomeLabel = $this->outcomeLabel($row['status']);
+
+                            [$outcomeColor, $outcomeAccent] = match ($row['status']) {
+                                'success' => ['border-ok/30 bg-ok/10 text-ok', 'border-l-ok/60'],
+                                'failed' => ['border-flame-danger/30 bg-flame-danger/10 text-flame-danger', 'border-l-flame-danger/60'],
+                                'invalid', 'blocked', 'insufficient', 'allowance_exhausted', 'unavailable' => ['border-flame-warn/30 bg-flame-warn/10 text-flame-warn', 'border-l-flame-warn/60'],
+                                default => ['border-white/14 bg-white/5 text-white/55', 'border-l-white/20'],
                             };
                         @endphp
 
@@ -533,9 +605,21 @@ new #[Title('Executar consulta')] class extends Component {
                                 <p class="mt-1 text-xs text-white/55">{{ __('A consulta não pôde ser concluída para este documento.') }}</p>
                             @endif
 
-                            @if ($row['cost'])
+                            @if ($row['cost'] !== null || $row['execution_id'] !== null)
                                 <p class="mt-2 text-xs text-white/55">
-                                    {{ __('Custo:') }} <span class="font-mono text-white">{{ $row['cost'] }}</span>
+                                    @if ($row['cost'] !== null)
+                                        {{ __('Custo:') }} <span class="font-mono text-white">{{ $row['cost'] }}</span>
+                                    @endif
+
+                                    @if ($row['execution_id'] !== null)
+                                        {{-- Sem wire:navigate: navegação SPA descarta o #fragment
+                                             e a âncora nunca seria alcançada. --}}
+                                        <a
+                                            href="{{ route('checker.history') }}#execucao-{{ $row['execution_id'] }}"
+                                            data-test="linha-historico-{{ $index }}"
+                                            class="ml-2 underline decoration-white/25 underline-offset-2 transition hover:text-white"
+                                        >{{ __('ver no histórico') }}</a>
+                                    @endif
                                 </p>
                             @endif
                         </div>

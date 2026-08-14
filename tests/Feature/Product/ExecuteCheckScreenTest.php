@@ -485,6 +485,50 @@ class ExecuteCheckScreenTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_the_batch_results_can_be_exported_as_csv_with_masked_documents(): void
+    {
+        [$user, $team] = $this->memberOf();
+        resolve(CreditWallet::class)->handle($team, 10_000, WalletTransactionType::Recharge, 'Fundo');
+        resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+        $check = Check::factory()->create(['provider_key' => 'fake']);
+
+        $this->actingAs($user);
+
+        // Conteúdo exato de propósito: prova ao mesmo tempo o formato
+        // (BOM + ponto-e-vírgula, amigável ao Excel pt-BR) e que só o
+        // documento mascarado sai no arquivo — nunca os dígitos crus.
+        Livewire::test('pages::checker.execute')
+            ->set('checkId', $check->id)
+            ->set('documents', "12345678909\nabc")
+            ->call('execute')
+            ->assertHasNoErrors()
+            ->call('exportCsv')
+            ->assertFileDownloaded(
+                'lote-de-consultas.csv',
+                "\xEF\xBB\xBFdocumento;desfecho;custo;resultado\n123******09;Sucesso;Grátis;nome=Fulano\na**;Inválido;;\n",
+            );
+    }
+
+    public function test_each_executed_row_links_to_its_history_entry(): void
+    {
+        [$user, $team] = $this->memberOf();
+        resolve(CreditWallet::class)->handle($team, 10_000, WalletTransactionType::Recharge, 'Fundo');
+        resolve(ProviderRegistry::class)->register(FakeProvider::returning(ProviderResult::success(['nome' => 'Fulano'])));
+        $check = Check::factory()->create(['provider_key' => 'fake']);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test('pages::checker.execute')
+            ->set('checkId', $check->id)
+            ->set('documents', '12345678909')
+            ->call('execute')
+            ->assertHasNoErrors();
+
+        $execution = CheckExecution::query()->firstOrFail();
+
+        $component->assertSeeHtml('#execucao-'.$execution->id);
+    }
+
     /**
      * @return array{0: User, 1: Team}
      */
