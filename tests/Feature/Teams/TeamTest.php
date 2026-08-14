@@ -26,6 +26,18 @@ class TeamTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_teams_index_page_is_in_portuguese(): void
+    {
+        $user = User::factory()->create();
+
+        // O produto fala pt_BR; os times eram o último bolsão em inglês.
+        $this->actingAs($user)
+            ->get(route('teams.index'))
+            ->assertSee('Gerencie seus times e participações')
+            ->assertSee('Criar time')
+            ->assertDontSee('Create team');
+    }
+
     public function test_teams_can_be_created(): void
     {
         $user = User::factory()->create();

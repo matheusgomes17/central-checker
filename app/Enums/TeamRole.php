@@ -12,11 +12,12 @@ enum TeamRole: string
     case Billing = 'billing';
 
     /**
-     * Get the display label for the role.
+     * Get the display label for the role, translated to the current locale.
+     * The API keeps exposing the raw enum value; only screens use this.
      */
     public function label(): string
     {
-        return ucfirst($this->value);
+        return __(ucfirst($this->value));
     }
 
     /**
