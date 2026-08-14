@@ -40,10 +40,13 @@ class SecurityTest extends TestCase
 
         $response->assertOk();
 
+        // Em pt_BR, como todo o produto — o starter deixou esta tela em inglês.
         $response->assertSee('Passkeys');
-        $response->assertSee('No passkeys yet');
+        $response->assertSee('Nenhuma passkey ainda');
         $response->assertSee('Autenticação em duas etapas');
-        $response->assertSee('Enable 2FA');
+        $response->assertSee('Ativar 2FA');
+        $response->assertSee('Alterar senha');
+        $response->assertDontSee('No passkeys yet');
     }
 
     public function test_security_settings_page_requires_password_confirmation_when_enabled(): void
@@ -66,10 +69,10 @@ class SecurityTest extends TestCase
             ->withSession(['auth.password_confirmed_at' => time()])
             ->get(route('security.edit'))
             ->assertOk()
-            ->assertSee('Update password')
-            ->assertDontSee('Manage your passkeys for passwordless sign-in')
-            ->assertDontSee('Add a passkey to sign in without a password')
-            ->assertDontSee('Two-factor authentication');
+            ->assertSee('Alterar senha')
+            ->assertDontSee('Gerencie suas passkeys para entrar sem senha')
+            ->assertDontSee('Adicione uma passkey para entrar sem senha')
+            ->assertDontSee('Autenticação em duas etapas');
     }
 
     public function test_two_factor_authentication_disabled_when_confirmation_abandoned_between_requests(): void

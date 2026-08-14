@@ -35,8 +35,8 @@ class BrowserSessionsTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test('pages::settings.browser-sessions')
-            ->assertSee('Chrome on macOS')
-            ->assertSee('Firefox on Windows')
+            ->assertSee('Chrome em macOS')
+            ->assertSee('Firefox em Windows')
             ->assertSee('203.0.113.10')
             ->assertSee('203.0.113.11');
     }
@@ -59,7 +59,7 @@ class BrowserSessionsTest extends TestCase
         Livewire::test('pages::settings.browser-sessions')
             ->assertSee('203.0.113.10')
             ->assertDontSee('198.51.100.20')
-            ->assertDontSee('Firefox on Windows');
+            ->assertDontSee('Firefox em Windows');
     }
 
     public function test_it_signs_out_the_other_sessions_and_keeps_the_current_one(): void
@@ -129,8 +129,8 @@ class BrowserSessionsTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test('pages::settings.browser-sessions')
-            ->assertDontSee('Browser sessions')
-            ->assertDontSee('Sign out other sessions');
+            ->assertDontSee('Sessões de navegador')
+            ->assertDontSee('Encerrar outras sessões');
     }
 
     private function storeSession(string $id, User $user, string $userAgent, string $ip): void
