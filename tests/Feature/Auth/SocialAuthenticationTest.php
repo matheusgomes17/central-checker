@@ -211,8 +211,8 @@ class SocialAuthenticationTest extends TestCase
     {
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Continue with Google')
-            ->assertSee('Continue with GitHub');
+            ->assertSee('Continuar com Google')
+            ->assertSee('Continuar com GitHub');
     }
 
     /**
@@ -225,8 +225,8 @@ class SocialAuthenticationTest extends TestCase
 
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Continue with Google')
-            ->assertDontSee('Continue with GitHub');
+            ->assertSee('Continuar com Google')
+            ->assertDontSee('Continuar com GitHub');
     }
 
     /**

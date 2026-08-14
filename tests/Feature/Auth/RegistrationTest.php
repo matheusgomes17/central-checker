@@ -21,6 +21,14 @@ class RegistrationTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_registration_screen_is_in_portuguese(): void
+    {
+        $this->get(route('register'))
+            ->assertSee('Crie sua conta')
+            ->assertSee('Nome completo')
+            ->assertDontSee('Create an account');
+    }
+
     public function test_new_users_can_register(): void
     {
         $response = $this->post(route('register.store'), [

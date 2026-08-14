@@ -9,7 +9,9 @@
             <x-team-invitation-alert :invitation="$teamInvitation" :action="__('Log in')" />
         @endif
 
-        <x-passkey-verify />
+        {{-- Ordem: alternativas primeiro (passkey, "ou", social), e um único
+             separador "Ou continue com email" apresentando o formulário. --}}
+        <x-passkey-verify :separator="__('or')" />
 
         <x-social-auth-buttons />
 

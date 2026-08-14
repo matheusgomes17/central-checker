@@ -61,15 +61,15 @@
                    class="text-sm text-center text-red-600 dark:text-red-400"></p>
             </div>
 
-            <div class="relative my-6">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-zinc-200 dark:border-zinc-700"></div>
-                </div>
-                <div class="relative flex justify-center text-xs uppercase">
-                    <span class="px-2 text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900">
-                        {{ $separator }}
-                    </span>
-                </div>
+            {{-- Linhas em flex, não overlay: o rótulo do overlay precisava de
+                 um bg sólido para cobrir a linha, que vira uma caixa cinza
+                 sobre o cartão translúcido do auth. --}}
+            <div class="my-6 flex items-center gap-4">
+                <div class="h-px flex-1 bg-zinc-200 dark:bg-zinc-700"></div>
+                <span class="text-xs tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+                    {{ $separator }}
+                </span>
+                <div class="h-px flex-1 bg-zinc-200 dark:bg-zinc-700"></div>
             </div>
         </div>
     </template>

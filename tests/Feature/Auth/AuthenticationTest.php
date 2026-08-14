@@ -23,6 +23,17 @@ class AuthenticationTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_login_screen_is_in_portuguese(): void
+    {
+        // O produto fala pt_BR (APP_LOCALE); a porta de entrada não pode
+        // ficar no inglês do starter.
+        $this->get(route('login'))
+            ->assertSee('Entre na sua conta')
+            ->assertSee('Senha')
+            ->assertSee('Entrar')
+            ->assertDontSee('Log in to your account');
+    }
+
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
         $user = User::factory()->create();
