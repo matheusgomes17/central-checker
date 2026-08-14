@@ -89,6 +89,59 @@ class WalletTest extends TestCase
         expect(Wallet::forTeam($team)->balance_cents)->toBe(0);
     }
 
+    public function test_the_open_charge_polls_and_shows_the_confirmation_once_paid(): void
+    {
+        Http::fake(['*/transactions' => Http::response([
+            'id' => 'uuid-1', 'copy_paste' => '000201-copia-e-cola', 'qr_code' => 'base64qr==', 'status' => 'pending',
+        ], 201)]);
+
+        [$user, $team] = $this->memberOf(TeamRole::Owner);
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $this->actingAs($user);
+
+        // Enquanto pendente, o painel se atualiza sozinho (wire:poll) e mostra o QR.
+        $component = Livewire::test('pages::checker.wallet')
+            ->set('amount', '50,00')
+            ->call('recharge')
+            ->assertHasNoErrors()
+            ->assertSeeHtml('wire:poll')
+            ->assertSee('000201-copia-e-cola');
+
+        // O webhook confirma e credita em segundo plano; o próximo poll
+        // encontra a cobrança paga.
+        PaymentIntent::query()->sole()->update(['status' => PaymentStatus::Paid]);
+
+        $component->call('$refresh')
+            ->assertSee('Recarga confirmada')
+            ->assertDontSee('000201-copia-e-cola')
+            ->assertDontSeeHtml('wire:poll');
+    }
+
+    public function test_an_expired_charge_stops_polling_and_says_so(): void
+    {
+        Http::fake(['*/transactions' => Http::response([
+            'id' => 'uuid-1', 'copy_paste' => '000201-copia-e-cola', 'qr_code' => 'base64qr==', 'status' => 'pending',
+        ], 201)]);
+
+        [$user, $team] = $this->memberOf(TeamRole::Owner);
+        Wallet::factory()->create(['team_id' => $team->id]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test('pages::checker.wallet')
+            ->set('amount', '50,00')
+            ->call('recharge')
+            ->assertHasNoErrors();
+
+        PaymentIntent::query()->sole()->update(['status' => PaymentStatus::Expired]);
+
+        $component->call('$refresh')
+            ->assertSee('Esta cobrança expirou')
+            ->assertDontSee('000201-copia-e-cola')
+            ->assertDontSeeHtml('wire:poll');
+    }
+
     public function test_an_amount_out_of_range_shows_a_friendly_message(): void
     {
         Http::fake();

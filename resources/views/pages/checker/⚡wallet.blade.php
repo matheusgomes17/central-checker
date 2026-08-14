@@ -258,11 +258,45 @@ new #[Title('Carteira')] class extends Component {
 
         @if ($this->canManage)
             @if ($this->intent)
-                <div
-                    wire:key="pix-{{ $this->intent->id }}"
-                    class="rounded-xl border border-fire-500/25 bg-white/2 p-6 motion-safe:animate-ignite"
-                    data-test="pix-charge"
-                >
+                {{-- Forma em bloco de propósito: a variante inline (com
+                     parênteses) da directive de PHP quebra no pipeline de
+                     views extraídas do Livewire v4, que a trata como abertura
+                     de bloco e deixa o PHP aberto até o fim do arquivo. Pelo
+                     mesmo motivo, nenhuma directive pode aparecer escrita
+                     dentro de comentários Blade nestas páginas: o compilador
+                     do Livewire conta os tokens antes de o Blade descartar o
+                     comentário. --}}
+                @php
+                    $pixPanelClasses = 'rounded-xl border border-fire-500/25 bg-white/2 p-6 motion-safe:animate-ignite';
+                @endphp
+                {{-- Um painel por estado, e wire:poll só no pendente: quando o
+                     webhook confirma ou a cobrança expira, o poll seguinte
+                     troca o painel e o atributo some — nenhuma requisição fica
+                     se repetindo à toa. --}}
+                @if ($this->intent->status === PaymentStatus::Paid)
+                    <div wire:key="pix-pago-{{ $this->intent->id }}" class="{{ $pixPanelClasses }}" data-test="pix-charge">
+                        <div class="flex items-center gap-1.5 text-xs font-medium tracking-widest text-ok uppercase">
+                            <flux:icon.check-circle class="size-3.5 shrink-0" />
+                            <span>{{ __('Recarga confirmada') }}</span>
+                        </div>
+
+                        <p class="mt-3 text-sm text-white/80" data-test="pix-confirmado">
+                            {{ __(':valor creditados na carteira do time.', ['valor' => Number::currency($this->intent->amount_cents / 100, in: 'BRL', locale: 'pt_BR')]) }}
+                        </p>
+                    </div>
+                @elseif ($this->intent->status !== PaymentStatus::Pending)
+                    <div wire:key="pix-encerrado-{{ $this->intent->id }}" class="{{ $pixPanelClasses }}" data-test="pix-charge">
+                        <div class="flex items-center gap-1.5 text-xs font-medium tracking-widest text-white/55 uppercase">
+                            <flux:icon.clock class="size-3.5 shrink-0" />
+                            <span>{{ __('Cobrança encerrada') }}</span>
+                        </div>
+
+                        <p class="mt-3 text-sm text-white/80" data-test="pix-expirado">
+                            {{ __('Esta cobrança expirou sem pagamento. Gere um novo Pix para recarregar.') }}
+                        </p>
+                    </div>
+                @else
+                <div wire:key="pix-{{ $this->intent->id }}" wire:poll.5s class="{{ $pixPanelClasses }}" data-test="pix-charge">
                     <div class="flex items-center gap-1.5 text-xs font-medium tracking-widest text-fire-500 uppercase">
                         <flux:icon.qr-code class="size-3.5 shrink-0" />
                         <span>{{ __('Pague com Pix para concluir a recarga') }}</span>
@@ -315,16 +349,13 @@ new #[Title('Carteira')] class extends Component {
                                 @endif
                             </div>
 
-                            {{-- Sem wire:poll aqui de propósito: o webhook credita a carteira
-                                 em segundo plano, e recarregar a página já mostra o saldo
-                                 atualizado — suficiente para o MVP sem manter uma requisição
-                                 se repetindo enquanto a tela fica aberta. --}}
-                            <p class="text-xs text-white/40">
-                                {{ __('Depois de pagar, atualize a página para ver o saldo atualizado.') }}
+                            <p class="text-xs tracking-wide text-white/40">
+                                {{ __('Assim que o pagamento cair, esta tela atualiza sozinha.') }}
                             </p>
                         </div>
                     </div>
                 </div>
+                @endif
             @endif
         @endif
 
