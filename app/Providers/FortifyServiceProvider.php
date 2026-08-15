@@ -164,7 +164,15 @@ class FortifyServiceProvider extends ServiceProvider
     private function throttleFortifyRoutes(): void
     {
         foreach (Route::getRoutes()->getRoutes() as $route) {
-            $limiter = self::THROTTLED_ROUTES[$route->getName()] ?? null;
+            $name = $route->getName();
+
+            // Rota sem nome nunca está em THROTTLED_ROUTES, e null não é
+            // chave válida de array para o PHPStan.
+            if ($name === null) {
+                continue;
+            }
+
+            $limiter = self::THROTTLED_ROUTES[$name] ?? null;
 
             if ($limiter === null) {
                 continue;
