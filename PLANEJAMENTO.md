@@ -748,6 +748,46 @@ operador.
 
 ---
 
+### Depois do plano — a primeira máquina limpa de verdade
+
+O fechamento da Fase 10 dizia que o critério de aceite — alguém que nunca viu o
+projeto conseguir sozinho — "só se sabe olhando a primeira pessoa tentar". A
+primeira tentativa num checkout sem `vendor/`, sem `node_modules` e sem `.env`
+aconteceu, e o `bin/setup` **não passou**. Três achados, os três corrigidos com
+teste em `SetupScriptTest`:
+
+1. **A ordem dos dois primeiros passos estava invertida.** O `compose.yaml`
+   monta `./vendor/laravel/sail/database/pgsql/create-testing-database.sql`, e o
+   script subia o Compose antes do `composer install`. Num clone limpo esse
+   caminho não existe e quem o cria é o Docker — **como root**. O
+   `composer install` seguinte morre em `vendor/pestphp does not exist and could
+   not be created`, e sair desse estado exige um contêiner só para apagar o que
+   ficou, porque o usuário não tem permissão sobre o que o daemon criou. O
+   `composer install` passou para antes de subir os serviços. O teste ancora no
+   `compose.yaml`: se ele deixar de ler de `vendor/`, a regra se anuncia
+   obsoleta em vez de virar cerimônia sem motivo.
+2. **O `aspell` não era conferido.** O `bin/setup` exigia php, composer, npm e
+   docker, mas o `composer check` — que é como este projeto define "terminei" —
+   termina no Peck, que não roda sem o aspell e o dicionário `en`. O check
+   abortava antes de chegar aos testes, numa máquina onde tudo o mais estava
+   certo. O CI já instalava os dois (`tests.yml`); a máquina do dev, não.
+3. **A mensagem final mentia sobre as portas.** Ela imprimia `localhost`,
+   `:8025` e `:8900` fixos, ignorando os `FORWARD_*` do `.env`. Quem remapeou
+   por conflito com outro projeto — situação comum, e foi o que aconteceu aqui:
+   6379, 1025/8025, 7700, 80 e 5173 já estavam ocupadas — recebe endereços que
+   não respondem e vai procurar o defeito no contêiner, que está certo.
+
+Um quarto, menor, apareceu junto: o `package.json` não tinha `name`, então o npm
+o derivava do nome da pasta e reescrevia o `package-lock.json` a cada
+`npm install`. Sujeira recorrente no diff que ninguém escolheu.
+
+**O que isso diz sobre o critério de aceite:** ele não estava verificado, estava
+suposto. As duas execuções que fecharam a Fase 10 rodaram numa máquina que já
+tinha `vendor/` — e é justamente o que não existe na primeira vez que alguém
+tenta.
+
+---
+
 ## 5. Cronograma
 
 | Fase | Dias | Acumulado |

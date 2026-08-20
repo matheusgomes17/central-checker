@@ -7,8 +7,16 @@ de operação. Feito para ser podado — o que o seu produto não usa sai fora, 
 
 ## O que precisa estar instalado
 
-PHP 8.4, Composer, Node 22 e Docker. Os serviços — Postgres, Redis, Mailpit,
-MinIO e Meilisearch — sobem em contêiner; a aplicação roda na sua máquina.
+PHP 8.4, Composer, Node 22, Docker e o aspell com o dicionário `en` (no
+Debian/Ubuntu, `sudo apt install aspell aspell-en`) — o `composer check` termina
+no Peck, que não roda sem ele. Os serviços — Postgres, Redis, Mailpit, MinIO e
+Meilisearch — sobem em contêiner; a aplicação roda na sua máquina.
+
+Se alguma das portas publicadas já estiver ocupada por outro projeto, remapeie
+no `.env` (`APP_PORT`, `VITE_PORT`, `FORWARD_DB_PORT`, `FORWARD_REDIS_PORT`,
+`FORWARD_MAILPIT_PORT`, `FORWARD_MAILPIT_DASHBOARD_PORT`,
+`FORWARD_MEILISEARCH_PORT`, `FORWARD_MINIO_PORT`, `FORWARD_MINIO_CONSOLE_PORT`)
+antes de rodar o `bin/setup`; ele imprime no fim os endereços que valem.
 
 ## Começando
 

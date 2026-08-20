@@ -33,6 +33,14 @@ require npm 'Instale o Node 22 ou mais novo.'
 require docker 'Instale o Docker Desktop ou o Docker Engine.'
 docker compose version >/dev/null 2>&1 || fail 'o plugin "docker compose" não está disponível.'
 
+# O aspell não é dependência da aplicação, é do `composer check` — que é como
+# este projeto define "terminei". Sem ele o Peck aborta antes dos testes, e o
+# check nunca chega a rodar a suíte. Falhar aqui, com o comando de instalação
+# à mão, custa menos que descobrir no fim do primeiro dia.
+require aspell 'O Peck (composer spell:check) usa ele. No Debian/Ubuntu: sudo apt install aspell aspell-en.'
+aspell dicts 2>/dev/null | grep -qx en \
+    || fail 'o dicionário "en" do aspell não está instalado. No Debian/Ubuntu: sudo apt install aspell-en.'
+
 php -r 'exit(PHP_VERSION_ID >= 80400 ? 0 : 1);' || fail "este projeto exige PHP 8.4; encontrei $(php -r 'echo PHP_VERSION;')."
 
 step 'Preparando o .env'
@@ -49,6 +57,33 @@ env_value() {
 
 DB_USERNAME="$(env_value DB_USERNAME)"
 DB_DATABASE="$(env_value DB_DATABASE)"
+
+# As portas publicadas podem estar remapeadas no .env por conflito com outro
+# projeto na máquina. Lidas aqui para a mensagem final falar dos endereços que
+# de fato responderam, e não dos padrões do compose.yaml.
+port_or_default() {
+    local value
+    value="$(env_value "$1")"
+
+    if [ -n "$value" ]; then
+        printf '%s' "$value"
+    else
+        printf '%s' "$2"
+    fi
+}
+
+APP_CONTAINER_PORT="$(port_or_default APP_PORT 80)"
+MAILPIT_PORT="$(port_or_default FORWARD_MAILPIT_DASHBOARD_PORT 8025)"
+MINIO_CONSOLE_PORT="$(port_or_default FORWARD_MINIO_CONSOLE_PORT 8900)"
+
+# Antes de subir o Compose, e não depois: o compose.yaml monta um arquivo de
+# dentro de vendor/ (o script que cria a base de testes). Num clone limpo esse
+# caminho não existe, e quem o cria é o Docker — como root. O composer install
+# seguinte então não consegue escrever em vendor/, e sair desse estado exige um
+# contêiner só para apagar o que ficou. Instalar primeiro faz o caminho existir
+# com o dono certo.
+step 'Instalando dependências PHP'
+composer install
 
 step 'Subindo os serviços (Postgres, Redis, Mailpit, MinIO, Meilisearch)'
 docker compose up -d
@@ -72,9 +107,6 @@ if ! docker compose exec -T pgsql psql -U "$DB_USERNAME" -lqt | cut -d '|' -f1 |
     echo 'base "testing" criada.'
 fi
 
-step 'Instalando dependências PHP'
-composer install
-
 step 'Chave da aplicação'
 if [ -n "$(env_value APP_KEY)" ]; then
     echo 'APP_KEY já definida, mantida. Gerar outra tornaria ilegível tudo que está cifrado no banco.'
@@ -92,7 +124,7 @@ npm install
 npm run build
 
 step 'Pronto'
-cat <<'TXT'
+cat <<TXT
 Suba a aplicação com:
 
     composer dev        # servidor, fila, logs e Vite juntos
@@ -107,12 +139,12 @@ criou — a senha de todos é "password":
 
 Outros endereços úteis:
 
-    http://localhost         a mesma aplicação, servida pelo contêiner
-    http://localhost:8025    Mailpit, onde chegam os e-mails
-    http://localhost:8900    console do MinIO (sail / password)
+    http://localhost:${APP_CONTAINER_PORT}    a mesma aplicação, servida pelo contêiner
+    http://localhost:${MAILPIT_PORT}    Mailpit, onde chegam os e-mails
+    http://localhost:${MINIO_CONSOLE_PORT}    console do MinIO (sail / password)
 
 Para rodar a suíte:
 
     composer check          tudo que o CI checa, menos os testes de browser
-    composer test:browser   exige `npx playwright install chromium` uma vez
+    composer test:browser   exige \`npx playwright install chromium\` uma vez
 TXT
